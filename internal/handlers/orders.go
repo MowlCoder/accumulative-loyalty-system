@@ -7,8 +7,8 @@ import (
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/contextutil"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/domain"
-	"github.com/MowlCoder/accumulative-loyalty-system/pkg/http_utils"
-	"github.com/MowlCoder/accumulative-loyalty-system/pkg/json_util"
+	"github.com/MowlCoder/accumulative-loyalty-system/pkg/httputils"
+	"github.com/MowlCoder/accumulative-loyalty-system/pkg/jsonutil"
 )
 
 type ordersService interface {
@@ -37,8 +37,8 @@ type registerOrderBody struct {
 func (h *OrdersHandler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 	var body registerOrderBody
 
-	if status, err := json_util.Unmarshal(w, r, &body); err != nil {
-		http_utils.SendJSONErrorResponse(w, status, err.Error())
+	if status, err := jsonutil.Unmarshal(w, r, &body); err != nil {
+		httputils.SendJSONErrorResponse(w, status, err.Error())
 		return
 	}
 
@@ -47,18 +47,18 @@ func (h *OrdersHandler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if errors.Is(err, domain.ErrOrderRegisteredByYou) {
-			http_utils.SendStatusCode(w, http.StatusOK)
+			httputils.SendStatusCode(w, http.StatusOK)
 			return
 		} else if errors.Is(err, domain.ErrOrderRegisteredByOther) {
-			http_utils.SendStatusCode(w, http.StatusConflict)
+			httputils.SendStatusCode(w, http.StatusConflict)
 			return
 		}
 
-		http_utils.SendStatusCode(w, http.StatusBadRequest)
+		httputils.SendStatusCode(w, http.StatusBadRequest)
 		return
 	}
 
-	http_utils.SendStatusCode(w, http.StatusAccepted)
+	httputils.SendStatusCode(w, http.StatusAccepted)
 }
 
 func (h *OrdersHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
@@ -66,14 +66,14 @@ func (h *OrdersHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	orders, err := h.service.GetUserOrders(r.Context(), userID)
 
 	if err != nil {
-		http_utils.SendStatusCode(w, http.StatusInternalServerError)
+		httputils.SendStatusCode(w, http.StatusInternalServerError)
 		return
 	}
 
 	if len(orders) == 0 {
-		http_utils.SendStatusCode(w, http.StatusNoContent)
+		httputils.SendStatusCode(w, http.StatusNoContent)
 		return
 	}
 
-	http_utils.SendJSONResponse(w, http.StatusOK, orders)
+	httputils.SendJSONResponse(w, http.StatusOK, orders)
 }

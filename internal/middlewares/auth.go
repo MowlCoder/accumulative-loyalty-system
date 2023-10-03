@@ -7,7 +7,7 @@ import (
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/contextutil"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/jwt"
-	"github.com/MowlCoder/accumulative-loyalty-system/pkg/http_utils"
+	"github.com/MowlCoder/accumulative-loyalty-system/pkg/httputils"
 )
 
 var (
@@ -19,14 +19,14 @@ func AuthMiddleware(next http.Handler) http.HandlerFunc {
 		token, err := getTokenFromHeader(r)
 
 		if err != nil {
-			http_utils.SendStatusCode(w, http.StatusUnauthorized)
+			httputils.SendStatusCode(w, http.StatusUnauthorized)
 			return
 		}
 
 		jwtClaim, err := jwt.ParseToken(token)
 
 		if err != nil {
-			http_utils.SendStatusCode(w, http.StatusUnauthorized)
+			httputils.SendStatusCode(w, http.StatusUnauthorized)
 			return
 		}
 

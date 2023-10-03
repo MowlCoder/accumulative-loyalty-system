@@ -7,8 +7,8 @@ import (
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/domain"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/jwt"
-	"github.com/MowlCoder/accumulative-loyalty-system/pkg/http_utils"
-	"github.com/MowlCoder/accumulative-loyalty-system/pkg/json_util"
+	"github.com/MowlCoder/accumulative-loyalty-system/pkg/httputils"
+	"github.com/MowlCoder/accumulative-loyalty-system/pkg/jsonutil"
 )
 
 type userServiceForAuth interface {
@@ -42,8 +42,8 @@ type registerResponse struct {
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var body registerBody
 
-	if status, err := json_util.Unmarshal(w, r, &body); err != nil {
-		http_utils.SendJSONErrorResponse(w, status, err.Error())
+	if status, err := jsonutil.Unmarshal(w, r, &body); err != nil {
+		httputils.SendJSONErrorResponse(w, status, err.Error())
 		return
 	}
 
@@ -51,18 +51,18 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if errors.Is(err, domain.ErrLoginAlreadyTaken) {
-			http_utils.SendJSONErrorResponse(w, http.StatusConflict, err.Error())
+			httputils.SendJSONErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 
-		http_utils.SendJSONErrorResponse(w, http.StatusBadRequest, err.Error())
+		httputils.SendJSONErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	accessToken, err := jwt.GenerateToken(user.ID)
 
 	if err != nil {
-		http_utils.SendJSONErrorResponse(w, http.StatusInternalServerError, "can not generate token")
+		httputils.SendJSONErrorResponse(w, http.StatusInternalServerError, "can not generate token")
 		return
 	}
 
@@ -70,7 +70,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		AccessToken: accessToken,
 	}
 
-	http_utils.SendJSONResponse(w, http.StatusOK, response)
+	httputils.SendJSONResponse(w, http.StatusOK, response)
 }
 
 type loginBody struct {
@@ -85,8 +85,8 @@ type loginResponse struct {
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var body loginBody
 
-	if status, err := json_util.Unmarshal(w, r, &body); err != nil {
-		http_utils.SendJSONErrorResponse(w, status, err.Error())
+	if status, err := jsonutil.Unmarshal(w, r, &body); err != nil {
+		httputils.SendJSONErrorResponse(w, status, err.Error())
 		return
 	}
 
@@ -94,18 +94,18 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidLoginOrPassword) {
-			http_utils.SendJSONErrorResponse(w, http.StatusUnauthorized, err.Error())
+			httputils.SendJSONErrorResponse(w, http.StatusUnauthorized, err.Error())
 			return
 		}
 
-		http_utils.SendJSONErrorResponse(w, http.StatusBadRequest, err.Error())
+		httputils.SendJSONErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	accessToken, err := jwt.GenerateToken(user.ID)
 
 	if err != nil {
-		http_utils.SendJSONErrorResponse(w, http.StatusInternalServerError, "can not generate token")
+		httputils.SendJSONErrorResponse(w, http.StatusInternalServerError, "can not generate token")
 		return
 	}
 
@@ -113,5 +113,5 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		AccessToken: accessToken,
 	}
 
-	http_utils.SendJSONResponse(w, http.StatusOK, response)
+	httputils.SendJSONResponse(w, http.StatusOK, response)
 }

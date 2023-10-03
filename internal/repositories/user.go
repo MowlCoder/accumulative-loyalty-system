@@ -41,13 +41,13 @@ func (repo *UserRepository) GetByID(ctx context.Context, id int) (*domain.User, 
 }
 
 func (repo *UserRepository) SaveUser(ctx context.Context, login string, hashedPassword string) (*domain.User, error) {
-	var insertedId int64
+	var insertedID int64
 
 	err := repo.pool.QueryRow(
 		ctx,
 		"INSERT INTO users (login, password) VALUES ($1, $2) RETURNING id",
 		login, hashedPassword,
-	).Scan(&insertedId)
+	).Scan(&insertedID)
 
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -60,7 +60,7 @@ func (repo *UserRepository) SaveUser(ctx context.Context, login string, hashedPa
 	}
 
 	return &domain.User{
-		ID:        int(insertedId),
+		ID:        int(insertedID),
 		Login:     login,
 		Password:  hashedPassword,
 		CreatedAt: time.Now(),
