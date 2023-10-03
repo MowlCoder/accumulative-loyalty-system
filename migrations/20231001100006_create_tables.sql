@@ -5,10 +5,9 @@ CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     login VARCHAR(60) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    balance DOUBLE PRECISION DEFAULT 0
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS balance_withdrawals (
+CREATE TABLE IF NOT EXISTS balance_actions (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
     amount DOUBLE PRECISION NOT NULL,
@@ -29,6 +28,6 @@ CREATE TABLE IF NOT EXISTS user_orders (
 -- +goose StatementBegin
 SELECT 'down SQL query';
 DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS balance_withdrawals;
+DROP TABLE IF EXISTS balance_actions;
 DROP TABLE IF EXISTS user_orders;
 -- +goose StatementEnd

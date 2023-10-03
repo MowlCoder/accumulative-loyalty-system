@@ -33,12 +33,12 @@ func main() {
 	}
 
 	userRepository := repositories.NewUserRepository(dbPool)
-	withdrawalRepository := repositories.NewWithdrawalRepository(dbPool)
+	balanceActionsRepository := repositories.NewBalanceActionsRepository(dbPool)
 	userOrderRepository := repositories.NewUserOrderRepository(dbPool)
 
-	userService := services.NewUserService(userRepository, withdrawalRepository)
+	userService := services.NewUserService(userRepository, balanceActionsRepository)
 	ordersService := services.NewOrdersService(userOrderRepository)
-	withdrawalService := services.NewWithdrawalsService(withdrawalRepository, userRepository)
+	withdrawalService := services.NewWithdrawalsService(balanceActionsRepository)
 
 	authHandler := handlers.NewAuthHandler(&handlers.AuthHandlerOptions{
 		UserService: userService,

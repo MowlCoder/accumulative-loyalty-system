@@ -29,9 +29,9 @@ func (repo *UserRepository) GetByID(ctx context.Context, id int) (*domain.User, 
 
 	err := repo.pool.QueryRow(
 		ctx,
-		"SELECT id, login, password, created_at, balance FROM users WHERE id = $1",
+		"SELECT id, login, password, created_at FROM users WHERE id = $1",
 		id,
-	).Scan(&user.ID, &user.Login, &user.Password, &user.CreatedAt, &user.Balance)
+	).Scan(&user.ID, &user.Login, &user.Password, &user.CreatedAt)
 
 	if err != nil {
 		return nil, domain.ErrNotFound
@@ -64,7 +64,6 @@ func (repo *UserRepository) SaveUser(ctx context.Context, login string, hashedPa
 		Login:     login,
 		Password:  hashedPassword,
 		CreatedAt: time.Now(),
-		Balance:   0,
 	}, nil
 }
 
@@ -73,23 +72,13 @@ func (repo *UserRepository) GetByLogin(ctx context.Context, login string) (*doma
 
 	err := repo.pool.QueryRow(
 		ctx,
-		"SELECT id, login, password, created_at, balance FROM users WHERE login = $1",
+		"SELECT id, login, password, created_at FROM users WHERE login = $1",
 		login,
-	).Scan(&user.ID, &user.Login, &user.Password, &user.CreatedAt, &user.Balance)
+	).Scan(&user.ID, &user.Login, &user.Password, &user.CreatedAt)
 
 	if err != nil {
 		return nil, err
 	}
 
 	return &user, nil
-}
-
-func (repo *UserRepository) ChangeBalance(ctx context.Context, userID int, newBalance float64) error {
-	_, err := repo.pool.Exec(
-		ctx,
-		"UPDATE users SET balance = $1 WHERE id = $2",
-		newBalance, userID,
-	)
-
-	return err
 }

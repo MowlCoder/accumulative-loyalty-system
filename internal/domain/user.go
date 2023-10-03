@@ -7,7 +7,6 @@ type User struct {
 	Login     string    `json:"login"`
 	Password  string    `json:"-"`
 	CreatedAt time.Time `json:"created_at"`
-	Balance   float64   `json:"balance"`
 }
 
 type UserBalance struct {

@@ -40,7 +40,10 @@ func (repo *UserOrderRepository) GetByOrderID(ctx context.Context, orderID strin
 func (repo *UserOrderRepository) GetByUserID(ctx context.Context, userID int) ([]domain.UserOrder, error) {
 	rows, err := repo.pool.Query(
 		ctx,
-		"SELECT order_id, user_id, status, accrual, uploaded_at FROM user_orders WHERE user_id = $1 ORDER BY uploaded_at",
+		"SELECT order_id, user_id, status, accrual, uploaded_at "+
+			"FROM user_orders "+
+			"WHERE user_id = $1 "+
+			"ORDER BY uploaded_at",
 		userID,
 	)
 

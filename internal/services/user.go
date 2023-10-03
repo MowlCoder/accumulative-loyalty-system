@@ -14,35 +14,31 @@ type userRepository interface {
 	SaveUser(ctx context.Context, login string, hashedPassword string) (*domain.User, error)
 }
 
-type withdrawalRepositoryForUser interface {
+type balanceActionsRepositoryForUser interface {
 	GetWithdrawalAmount(ctx context.Context, userID int) float64
+	GetCurrentBalance(ctx context.Context, userID int) float64
 }
 
 type UserService struct {
-	repo           userRepository
-	withdrawalRepo withdrawalRepositoryForUser
+	repo               userRepository
+	balanceActionsRepo balanceActionsRepositoryForUser
 }
 
-func NewUserService(repo userRepository, withdrawalRepo withdrawalRepositoryForUser) *UserService {
+func NewUserService(repo userRepository, balanceActionsRepo balanceActionsRepositoryForUser) *UserService {
 	return &UserService{
-		repo:           repo,
-		withdrawalRepo: withdrawalRepo,
+		repo:               repo,
+		balanceActionsRepo: balanceActionsRepo,
 	}
 }
 
 func (s *UserService) GetUserBalance(ctx context.Context, userID int) (*domain.UserBalance, error) {
-	user, err := s.repo.GetByID(ctx, userID)
-
-	if err != nil {
-		return nil, err
-	}
-
-	withdrawalAmount := s.withdrawalRepo.GetWithdrawalAmount(ctx, userID)
+	userBalance := s.balanceActionsRepo.GetCurrentBalance(ctx, userID)
+	withdrawalAmount := s.balanceActionsRepo.GetWithdrawalAmount(ctx, userID)
 
 	return &domain.UserBalance{
-		Current:   user.Balance,
+		Current:   userBalance,
 		Withdrawn: withdrawalAmount,
-	}, err
+	}, nil
 }
 
 func (s *UserService) Register(ctx context.Context, login string, password string) (*domain.User, error) {
