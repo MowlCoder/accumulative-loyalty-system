@@ -64,7 +64,7 @@ func (r *BalanceActionsRepository) GetWithdrawalAmount(ctx context.Context, user
 	return math.Abs(amount)
 }
 
-func (r *BalanceActionsRepository) GetUserWithdrawals(ctx context.Context, userID int) ([]domain.BalanceWithdrawal, error) {
+func (r *BalanceActionsRepository) GetUserWithdrawals(ctx context.Context, userID int) ([]domain.BalanceAction, error) {
 	rows, err := r.pool.Query(
 		ctx,
 		"SELECT id, order_id, user_id, amount, created_at, processed_at "+
@@ -82,10 +82,10 @@ func (r *BalanceActionsRepository) GetUserWithdrawals(ctx context.Context, userI
 		return nil, rows.Err()
 	}
 
-	result := make([]domain.BalanceWithdrawal, 0)
+	result := make([]domain.BalanceAction, 0)
 
 	for rows.Next() {
-		var bw domain.BalanceWithdrawal
+		var bw domain.BalanceAction
 
 		if err := rows.Scan(&bw.ID, &bw.OrderID, &bw.UserID, &bw.Amount, &bw.CreatedAt, &bw.ProcessedAt); err != nil {
 			return nil, err

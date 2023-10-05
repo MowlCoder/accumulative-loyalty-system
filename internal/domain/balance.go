@@ -2,7 +2,7 @@ package domain
 
 import "time"
 
-type BalanceWithdrawal struct {
+type BalanceAction struct {
 	ID          int        `json:"id"`
 	UserID      int        `json:"user_id"`
 	Amount      float64    `json:"amount"`

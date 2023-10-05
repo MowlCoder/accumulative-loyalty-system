@@ -8,7 +8,7 @@ import (
 
 type balanceActionRepository interface {
 	GetCurrentBalance(ctx context.Context, userID int) float64
-	GetUserWithdrawals(ctx context.Context, userID int) ([]domain.BalanceWithdrawal, error)
+	GetUserWithdrawals(ctx context.Context, userID int) ([]domain.BalanceAction, error)
 	Save(ctx context.Context, userID int, orderID string, amount float64) error
 }
 
@@ -24,7 +24,7 @@ func NewWithdrawalsService(
 	}
 }
 
-func (s *WithdrawalsService) GetWithdrawalsHistory(ctx context.Context, userID int) ([]domain.BalanceWithdrawal, error) {
+func (s *WithdrawalsService) GetWithdrawalsHistory(ctx context.Context, userID int) ([]domain.BalanceAction, error) {
 	return s.balanceActionRepository.GetUserWithdrawals(ctx, userID)
 }
 

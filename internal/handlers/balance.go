@@ -17,7 +17,7 @@ type userServiceForBalance interface {
 }
 
 type withdrawalServiceForBalance interface {
-	GetWithdrawalsHistory(ctx context.Context, userID int) ([]domain.BalanceWithdrawal, error)
+	GetWithdrawalsHistory(ctx context.Context, userID int) ([]domain.BalanceAction, error)
 	WithdrawBalance(ctx context.Context, userID int, orderID string, amount float64) error
 }
 
