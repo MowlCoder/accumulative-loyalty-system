@@ -39,7 +39,11 @@ func NewBalanceHandler(options *BalanceHandlerOptions) *BalanceHandler {
 }
 
 func (h *BalanceHandler) GetUserBalance(w http.ResponseWriter, r *http.Request) {
-	userID := contextutil.GetUserIDFromContext(r.Context())
+	userID, err := contextutil.GetUserIDFromContext(r.Context())
+
+	if err != nil {
+		httputils.SendJSONErrorResponse(w, http.StatusUnauthorized, "unauthorized")
+	}
 
 	balance, err := h.userService.GetUserBalance(r.Context(), userID)
 
@@ -64,9 +68,13 @@ func (h *BalanceHandler) WithdrawBalance(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	userID := contextutil.GetUserIDFromContext(r.Context())
+	userID, err := contextutil.GetUserIDFromContext(r.Context())
 
-	err := h.withdrawalService.WithdrawBalance(
+	if err != nil {
+		httputils.SendJSONErrorResponse(w, http.StatusUnauthorized, "unauthorized")
+	}
+
+	err = h.withdrawalService.WithdrawBalance(
 		r.Context(),
 		userID,
 		body.Order,
@@ -87,7 +95,11 @@ func (h *BalanceHandler) WithdrawBalance(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *BalanceHandler) GetWithdrawalHistory(w http.ResponseWriter, r *http.Request) {
-	userID := contextutil.GetUserIDFromContext(r.Context())
+	userID, err := contextutil.GetUserIDFromContext(r.Context())
+
+	if err != nil {
+		httputils.SendJSONErrorResponse(w, http.StatusUnauthorized, "unauthorized")
+	}
 
 	withdrawals, err := h.withdrawalService.GetWithdrawalsHistory(r.Context(), userID)
 

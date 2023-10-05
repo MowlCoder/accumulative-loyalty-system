@@ -42,8 +42,13 @@ func (h *OrdersHandler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := contextutil.GetUserIDFromContext(r.Context())
-	_, err := h.service.RegisterOrder(r.Context(), body.OrderID, userID)
+	userID, err := contextutil.GetUserIDFromContext(r.Context())
+
+	if err != nil {
+		httputils.SendJSONErrorResponse(w, http.StatusUnauthorized, "unauthorized")
+	}
+
+	_, err = h.service.RegisterOrder(r.Context(), body.OrderID, userID)
 
 	if err != nil {
 		if errors.Is(err, domain.ErrOrderRegisteredByYou) {
@@ -62,7 +67,12 @@ func (h *OrdersHandler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *OrdersHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
-	userID := contextutil.GetUserIDFromContext(r.Context())
+	userID, err := contextutil.GetUserIDFromContext(r.Context())
+
+	if err != nil {
+		httputils.SendJSONErrorResponse(w, http.StatusUnauthorized, "unauthorized")
+	}
+
 	orders, err := h.service.GetUserOrders(r.Context(), userID)
 
 	if err != nil {
