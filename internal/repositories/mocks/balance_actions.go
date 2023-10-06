@@ -24,6 +24,18 @@ func (r *BalanceActionRepoMock) GetCurrentBalance(ctx context.Context, userID in
 	return balance
 }
 
+func (r *BalanceActionRepoMock) GetWithdrawalAmount(ctx context.Context, userID int) float64 {
+	var withdrawalAmount float64
+
+	for _, action := range r.Storage {
+		if action.UserID == userID && action.Amount < 0 {
+			withdrawalAmount += action.Amount
+		}
+	}
+
+	return math.Abs(withdrawalAmount)
+}
+
 func (r *BalanceActionRepoMock) GetUserWithdrawals(ctx context.Context, userID int) ([]domain.BalanceAction, error) {
 	result := make([]domain.BalanceAction, 0)
 
