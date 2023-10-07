@@ -10,6 +10,7 @@ import (
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/contextutil"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/domain"
+	"github.com/MowlCoder/accumulative-loyalty-system/internal/utils"
 	"github.com/MowlCoder/accumulative-loyalty-system/pkg/httputils"
 	"github.com/MowlCoder/accumulative-loyalty-system/pkg/jsonutil"
 )
@@ -60,8 +61,8 @@ func (h *OrdersHandler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 		orderID = string(body)
 	}
 
-	if orderID == "" {
-		httputils.SendJSONErrorResponse(w, http.StatusBadRequest, "Bad body, should be valid order number")
+	if !utils.LuhnCheck(orderID) {
+		httputils.SendJSONErrorResponse(w, http.StatusUnprocessableEntity, "Bad body, should be valid order number")
 		return
 	}
 
