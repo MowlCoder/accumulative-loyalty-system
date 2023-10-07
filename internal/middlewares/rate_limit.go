@@ -8,7 +8,7 @@ import (
 )
 
 func RateLimit(next http.Handler) http.HandlerFunc {
-	rateLimiter := httprate.Limit(500, time.Minute*1)(next)
+	rateLimiter := httprate.Limit(1000, time.Minute*1)(next)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		rateLimiter.ServeHTTP(w, r)

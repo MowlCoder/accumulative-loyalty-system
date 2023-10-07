@@ -31,11 +31,24 @@ type saveNewGoodRewardBody struct {
 	RewardType string  `json:"reward_type"`
 }
 
+func (b *saveNewGoodRewardBody) Valid() bool {
+	if len(b.Match) == 0 || b.Reward <= 0 || !domain.IsValidRewardType(b.RewardType) {
+		return false
+	}
+
+	return true
+}
+
 func (h *GoodsHandler) SaveNewGoodReward(w http.ResponseWriter, r *http.Request) {
 	var body saveNewGoodRewardBody
 
 	if status, err := jsonutil.Unmarshal(w, r, &body); err != nil {
 		httputils.SendJSONErrorResponse(w, status, err.Error())
+		return
+	}
+
+	if !body.Valid() {
+		httputils.SendJSONErrorResponse(w, http.StatusBadRequest, "invalid body")
 		return
 	}
 
