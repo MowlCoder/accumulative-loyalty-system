@@ -35,6 +35,14 @@ type registerBody struct {
 	Password string `json:"password"`
 }
 
+func (b *registerBody) Valid() bool {
+	if len(b.Login) < 4 || len(b.Password) < 6 {
+		return false
+	}
+
+	return true
+}
+
 type registerResponse struct {
 	AccessToken string `json:"access_token"`
 }
@@ -44,6 +52,11 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	if status, err := jsonutil.Unmarshal(w, r, &body); err != nil {
 		httputils.SendJSONErrorResponse(w, status, err.Error())
+		return
+	}
+
+	if !body.Valid() {
+		httputils.SendJSONErrorResponse(w, http.StatusBadRequest, "invalid body")
 		return
 	}
 
@@ -80,6 +93,14 @@ type loginBody struct {
 	Password string `json:"password"`
 }
 
+func (b *loginBody) Valid() bool {
+	if len(b.Login) == 0 || len(b.Password) == 0 {
+		return false
+	}
+
+	return true
+}
+
 type loginResponse struct {
 	AccessToken string `json:"access_token"`
 }
@@ -89,6 +110,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	if status, err := jsonutil.Unmarshal(w, r, &body); err != nil {
 		httputils.SendJSONErrorResponse(w, status, err.Error())
+		return
+	}
+
+	if !body.Valid() {
+		httputils.SendJSONErrorResponse(w, http.StatusBadRequest, "invalid body")
 		return
 	}
 
