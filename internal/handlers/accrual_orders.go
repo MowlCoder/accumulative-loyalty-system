@@ -61,11 +61,24 @@ type registerOrderForAccrualBody struct {
 	Goods []domain.OrderGood `json:"goods"`
 }
 
+func (b *registerOrderForAccrualBody) Valid() bool {
+	if len(b.Order) == 0 || len(b.Goods) == 0 {
+		return false
+	}
+
+	return true
+}
+
 func (h *AccrualOrdersHandler) RegisterOrderForAccrual(w http.ResponseWriter, r *http.Request) {
 	var body registerOrderForAccrualBody
 
 	if status, err := jsonutil.Unmarshal(w, r, &body); err != nil {
 		httputils.SendJSONErrorResponse(w, status, err.Error())
+		return
+	}
+
+	if !body.Valid() {
+		httputils.SendJSONErrorResponse(w, http.StatusBadRequest, "invalid body")
 		return
 	}
 
