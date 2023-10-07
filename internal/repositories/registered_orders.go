@@ -142,13 +142,13 @@ func (r *RegisteredOrdersRepository) RegisterOrder(
 
 	defer tx.Rollback(ctx)
 
-	var insertedId string
+	var insertedID string
 
 	err = tx.QueryRow(
 		ctx,
 		"INSERT INTO registered_orders (order_id, status) VALUES ($1, $2) RETURNING order_id",
 		orderID, domain.NewRegisteredOrderStatus,
-	).Scan(&insertedId)
+	).Scan(&insertedID)
 
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -165,7 +165,7 @@ func (r *RegisteredOrdersRepository) RegisterOrder(
 	for _, good := range goods {
 		batch.Queue(
 			"INSERT INTO orders_goods (order_id, description, price) VALUES ($1, $2, $3)",
-			insertedId, good.Description, good.Price,
+			insertedID, good.Description, good.Price,
 		)
 	}
 
@@ -180,7 +180,7 @@ func (r *RegisteredOrdersRepository) RegisterOrder(
 	}
 
 	return &domain.RegisteredOrder{
-		OrderID:   insertedId,
+		OrderID:   insertedID,
 		Status:    domain.NewRegisteredOrderStatus,
 		CreatedAt: time.Now().UTC(),
 		Goods:     goods,

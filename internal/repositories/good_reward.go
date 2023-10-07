@@ -67,13 +67,13 @@ func (r *GoodRewardRepository) GetRewardsWithMatches(ctx context.Context, descri
 func (r *GoodRewardRepository) SaveReward(
 	ctx context.Context, match string, reward float64, rewardType string,
 ) (*domain.GoodReward, error) {
-	var insertedId int64
+	var insertedID int64
 
 	err := r.pool.QueryRow(
 		ctx,
 		"INSERT INTO good_rewards (match, reward, reward_type) VALUES ($1, $2, $3) RETURNING id",
 		match, reward, rewardType,
-	).Scan(&insertedId)
+	).Scan(&insertedID)
 
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -86,7 +86,7 @@ func (r *GoodRewardRepository) SaveReward(
 	}
 
 	return &domain.GoodReward{
-		ID:         int(insertedId),
+		ID:         int(insertedID),
 		Match:      match,
 		Reward:     reward,
 		RewardType: rewardType,
