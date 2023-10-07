@@ -70,6 +70,8 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		AccessToken: accessToken,
 	}
 
+	w.Header().Set("Authorization", "Bearer "+accessToken)
+
 	httputils.SendJSONResponse(w, http.StatusOK, response)
 }
 
@@ -112,6 +114,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	response := loginResponse{
 		AccessToken: accessToken,
 	}
+
+	w.Header().Set("Authorization", "Bearer "+accessToken)
 
 	httputils.SendJSONResponse(w, http.StatusOK, response)
 }
