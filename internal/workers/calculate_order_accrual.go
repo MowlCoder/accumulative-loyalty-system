@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"strings"
 	"time"
 
@@ -114,7 +115,7 @@ func (w *CalculateOrderAccrualWorker) processOrder(ctx context.Context, order *d
 		}
 	}
 
-	err = w.registeredOrdersRepository.SetCalculatedOrderAccrual(ctx, order.OrderID, accrual)
+	err = w.registeredOrdersRepository.SetCalculatedOrderAccrual(ctx, order.OrderID, math.Round(accrual*100)/100)
 
 	if err != nil {
 		log.Println("[calculate_order_accrual] set calculated order accrual", err)
