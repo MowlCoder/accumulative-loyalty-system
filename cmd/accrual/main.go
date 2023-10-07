@@ -11,6 +11,7 @@ import (
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/config"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/handlers"
+	"github.com/MowlCoder/accumulative-loyalty-system/internal/middlewares"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/repositories"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/services"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/storage/postgresql"
@@ -66,7 +67,7 @@ func main() {
 	})
 
 	router.Route("/api/orders", func(r chi.Router) {
-		r.Get("/{orderID}", accrualOrdersHandler.GetRegisteredOrderInfo)
+		r.Get("/{orderID}", middlewares.RateLimit(http.HandlerFunc(accrualOrdersHandler.GetRegisteredOrderInfo)))
 		r.Post("/", accrualOrdersHandler.RegisterOrderForAccrual)
 	})
 

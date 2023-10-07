@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/domain"
@@ -26,6 +27,7 @@ type OrderAccrualCheckingWorker struct {
 	userOrderRepository     userOrderRepository
 	balanceActionRepository balanceActionRepository
 	httpClient              *http.Client
+	isResting               bool
 	baseURL                 string
 }
 
@@ -40,7 +42,8 @@ func NewOrderAccrualCheckingWorker(
 		httpClient: &http.Client{
 			Timeout: time.Second * 10,
 		},
-		baseURL: accrualBaseURL,
+		baseURL:   accrualBaseURL,
+		isResting: false,
 	}
 }
 
@@ -54,6 +57,10 @@ func (w *OrderAccrualCheckingWorker) Start(ctx context.Context) {
 			case <-ctx.Done():
 				fmt.Println("DONE")
 			case <-ticker.C:
+				if w.isResting {
+					continue
+				}
+
 				orders, err := w.userOrderRepository.TakeOrdersForProcessing(ctx)
 
 				if err != nil {
@@ -118,6 +125,16 @@ func (w *OrderAccrualCheckingWorker) getInfoFromAccrualSystem(orderID string) (*
 	defer response.Body.Close()
 
 	if response.StatusCode > 299 {
+		if response.StatusCode == http.StatusTooManyRequests {
+			retryAfter, err := strconv.Atoi(response.Header.Get("Retry-After"))
+
+			if err != nil {
+				w.putWorkerToRest(60)
+			} else {
+				w.putWorkerToRest(retryAfter)
+			}
+		}
+
 		body, err := io.ReadAll(response.Body)
 
 		if err != nil {
@@ -134,6 +151,15 @@ func (w *OrderAccrualCheckingWorker) getInfoFromAccrualSystem(orderID string) (*
 	}
 
 	return &responseBody, nil
+}
+
+func (w *OrderAccrualCheckingWorker) putWorkerToRest(seconds int) {
+	log.Println("[checking_order_accrual] putting worker to rest for", seconds, "seconds")
+
+	w.isResting = true
+	timer := time.NewTimer(time.Second * time.Duration(seconds))
+	<-timer.C
+	w.isResting = false
 }
 
 type AccrualOrderInfo struct {
