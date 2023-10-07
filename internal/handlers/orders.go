@@ -3,7 +3,9 @@ package handlers
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
+	"strings"
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/contextutil"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/domain"
@@ -35,10 +37,30 @@ type registerOrderBody struct {
 }
 
 func (h *OrdersHandler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
-	var body registerOrderBody
+	orderID := ""
 
-	if status, err := jsonutil.Unmarshal(w, r, &body); err != nil {
-		httputils.SendJSONErrorResponse(w, status, err.Error())
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+		var body registerOrderBody
+
+		if status, err := jsonutil.Unmarshal(w, r, &body); err != nil {
+			httputils.SendJSONErrorResponse(w, status, err.Error())
+			return
+		}
+
+		orderID = body.OrderID
+	} else if strings.HasPrefix(r.Header.Get("Content-Type"), "text/plain") {
+		body, err := io.ReadAll(r.Body)
+
+		if err != nil {
+			httputils.SendJSONErrorResponse(w, http.StatusBadRequest, "Bad body, should be plain text order number")
+			return
+		}
+
+		orderID = string(body)
+	}
+
+	if orderID == "" {
+		httputils.SendJSONErrorResponse(w, http.StatusBadRequest, "Bad body, should be valid order number")
 		return
 	}
 
@@ -48,7 +70,7 @@ func (h *OrdersHandler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 		httputils.SendJSONErrorResponse(w, http.StatusUnauthorized, "unauthorized")
 	}
 
-	_, err = h.service.RegisterOrder(r.Context(), body.OrderID, userID)
+	_, err = h.service.RegisterOrder(r.Context(), orderID, userID)
 
 	if err != nil {
 		if errors.Is(err, domain.ErrOrderRegisteredByYou) {
