@@ -38,7 +38,7 @@ func NewCalculateOrderAccrualWorker(
 
 func (w *CalculateOrderAccrualWorker) Start(ctx context.Context) {
 	log.Println("Start calculate_order_accrual worker")
-	ticker := time.NewTicker(time.Second * 30)
+	ticker := time.NewTicker(time.Second * 5)
 
 	go func() {
 		for {

@@ -46,7 +46,7 @@ func NewOrderAccrualCheckingWorker(
 
 func (w *OrderAccrualCheckingWorker) Start(ctx context.Context) {
 	log.Println("Start checking_order_accrual worker")
-	ticker := time.NewTicker(time.Second * 30)
+	ticker := time.NewTicker(time.Second * 5)
 
 	go func() {
 		for {

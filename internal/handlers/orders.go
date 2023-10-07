@@ -68,6 +68,7 @@ func (h *OrdersHandler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		httputils.SendJSONErrorResponse(w, http.StatusUnauthorized, "unauthorized")
+		return
 	}
 
 	_, err = h.service.RegisterOrder(r.Context(), orderID, userID)
@@ -93,6 +94,7 @@ func (h *OrdersHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		httputils.SendJSONErrorResponse(w, http.StatusUnauthorized, "unauthorized")
+		return
 	}
 
 	orders, err := h.service.GetUserOrders(r.Context(), userID)
