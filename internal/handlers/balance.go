@@ -83,11 +83,11 @@ func (h *BalanceHandler) WithdrawBalance(w http.ResponseWriter, r *http.Request)
 
 	if err != nil {
 		if errors.Is(err, domain.ErrInsufficientFunds) {
-			httputils.SendStatusCode(w, http.StatusPaymentRequired)
+			httputils.SendJSONErrorResponse(w, http.StatusPaymentRequired, err.Error())
 			return
 		}
 
-		httputils.SendStatusCode(w, http.StatusInternalServerError)
+		httputils.SendJSONResponse(w, http.StatusInternalServerError, domain.ErrInternalServer.Error())
 		return
 	}
 

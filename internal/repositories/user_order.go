@@ -21,10 +21,10 @@ func NewUserOrderRepository(pool *pgxpool.Pool) *UserOrderRepository {
 	return &repo
 }
 
-func (repo *UserOrderRepository) GetByOrderID(ctx context.Context, orderID string) (*domain.UserOrder, error) {
+func (r *UserOrderRepository) GetByOrderID(ctx context.Context, orderID string) (*domain.UserOrder, error) {
 	var userOrder domain.UserOrder
 
-	err := repo.pool.QueryRow(
+	err := r.pool.QueryRow(
 		ctx,
 		"SELECT order_id, user_id, status, accrual, uploaded_at FROM user_orders WHERE order_id = $1",
 		orderID,
@@ -37,8 +37,22 @@ func (repo *UserOrderRepository) GetByOrderID(ctx context.Context, orderID strin
 	return &userOrder, nil
 }
 
-func (repo *UserOrderRepository) GetByUserID(ctx context.Context, userID int) ([]domain.UserOrder, error) {
-	rows, err := repo.pool.Query(
+func (r *UserOrderRepository) SetOrderCalculatingResult(ctx context.Context, orderID string, status string, accrual float64) error {
+	_, err := r.pool.Exec(
+		ctx,
+		"UPDATE user_orders SET status = $1, accrual = $2 WHERE order_id = $3",
+		status, accrual, orderID,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *UserOrderRepository) GetByUserID(ctx context.Context, userID int) ([]domain.UserOrder, error) {
+	rows, err := r.pool.Query(
 		ctx,
 		"SELECT order_id, user_id, status, accrual, uploaded_at "+
 			"FROM user_orders "+
@@ -70,8 +84,8 @@ func (repo *UserOrderRepository) GetByUserID(ctx context.Context, userID int) ([
 	return orders, nil
 }
 
-func (repo *UserOrderRepository) SaveOrder(ctx context.Context, orderID string, userID int) (*domain.UserOrder, error) {
-	_, err := repo.pool.Exec(
+func (r *UserOrderRepository) SaveOrder(ctx context.Context, orderID string, userID int) (*domain.UserOrder, error) {
+	_, err := r.pool.Exec(
 		ctx,
 		"INSERT INTO user_orders (order_id, user_id, status) VALUES ($1, $2, $3)",
 		orderID, userID, domain.NewOrderStatus,
@@ -88,4 +102,36 @@ func (repo *UserOrderRepository) SaveOrder(ctx context.Context, orderID string, 
 		Accrual:    nil,
 		UploadedAt: time.Now(),
 	}, nil
+}
+
+func (r *UserOrderRepository) TakeOrdersForProcessing(ctx context.Context) ([]domain.UserOrder, error) {
+	rows, err := r.pool.Query(
+		ctx,
+		"UPDATE user_orders SET status = $1 "+
+			"WHERE status = $2 OR status = $3 "+
+			"RETURNING order_id, user_id, status, accrual, uploaded_at",
+		domain.ProcessingOrderStatus, domain.NewOrderStatus, domain.ProcessingOrderStatus,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	orders := make([]domain.UserOrder, 0)
+
+	for rows.Next() {
+		var userOrder domain.UserOrder
+
+		if err := rows.Scan(&userOrder.OrderID, &userOrder.UserID, &userOrder.Status, &userOrder.Accrual, &userOrder.UploadedAt); err != nil {
+			return nil, err
+		}
+
+		orders = append(orders, userOrder)
+	}
+
+	return orders, nil
 }

@@ -55,11 +55,11 @@ func (h *OrdersHandler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 			httputils.SendStatusCode(w, http.StatusOK)
 			return
 		} else if errors.Is(err, domain.ErrOrderRegisteredByOther) {
-			httputils.SendStatusCode(w, http.StatusConflict)
+			httputils.SendJSONErrorResponse(w, http.StatusConflict, err.Error())
 			return
 		}
 
-		httputils.SendStatusCode(w, http.StatusBadRequest)
+		httputils.SendJSONErrorResponse(w, http.StatusInternalServerError, domain.ErrInternalServer.Error())
 		return
 	}
 
@@ -76,7 +76,7 @@ func (h *OrdersHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	orders, err := h.service.GetUserOrders(r.Context(), userID)
 
 	if err != nil {
-		httputils.SendStatusCode(w, http.StatusInternalServerError)
+		httputils.SendJSONResponse(w, http.StatusInternalServerError, domain.ErrInternalServer.Error())
 		return
 	}
 

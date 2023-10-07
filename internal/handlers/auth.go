@@ -55,7 +55,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		httputils.SendJSONErrorResponse(w, http.StatusBadRequest, err.Error())
+		httputils.SendJSONErrorResponse(w, http.StatusInternalServerError, domain.ErrInternalServer.Error())
 		return
 	}
 
@@ -98,7 +98,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		httputils.SendJSONErrorResponse(w, http.StatusBadRequest, err.Error())
+		httputils.SendJSONErrorResponse(w, http.StatusInternalServerError, domain.ErrInternalServer.Error())
 		return
 	}
 

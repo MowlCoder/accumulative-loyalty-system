@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/repositories"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/services"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/storage/postgresql"
+	"github.com/MowlCoder/accumulative-loyalty-system/internal/workers"
 )
 
 func main() {
@@ -23,10 +25,10 @@ func main() {
 		log.Println("No .env provided")
 	}
 
-	appConfig := &config.AppConfig{}
+	appConfig := &config.GophermartConfig{}
 	appConfig.Parse()
 
-	dbPool, err := postgresql.InitPool(appConfig.DatabaseDSN)
+	dbPool, err := postgresql.InitPool(appConfig.DatabaseURI)
 
 	if err != nil {
 		log.Panic(err)
@@ -51,6 +53,15 @@ func main() {
 		OrdersService: ordersService,
 	})
 
+	ctx := context.Background()
+
+	orderAccrualCheckingWorker := workers.NewOrderAccrualCheckingWorker(
+		userOrderRepository,
+		balanceActionsRepository,
+		appConfig.AccrualSystemAddress,
+	)
+	orderAccrualCheckingWorker.Start(ctx)
+
 	router := chi.NewRouter()
 
 	router.Use(middleware.Recoverer)
@@ -68,9 +79,9 @@ func main() {
 		r.Get("/withdrawals", middlewares.AuthMiddleware(http.HandlerFunc(balanceHandler.GetWithdrawalHistory)))
 	})
 
-	log.Println("Gophermart server is running on", appConfig.BaseHTTPAddr)
+	log.Println("Gophermart server is running on", appConfig.RunAddress)
 
-	if err := http.ListenAndServe(appConfig.BaseHTTPAddr, router); err != nil {
+	if err := http.ListenAndServe(appConfig.RunAddress, router); err != nil {
 		log.Panic(err)
 	}
 }
