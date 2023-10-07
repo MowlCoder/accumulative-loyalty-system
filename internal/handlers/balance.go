@@ -61,11 +61,24 @@ type withdrawBalanceBody struct {
 	Sum   float64 `json:"sum"`
 }
 
+func (b *withdrawBalanceBody) Valid() bool {
+	if b.Sum <= 0 || len(b.Order) == 0 {
+		return false
+	}
+
+	return true
+}
+
 func (h *BalanceHandler) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 	var body withdrawBalanceBody
 
 	if status, err := jsonutil.Unmarshal(w, r, &body); err != nil {
 		httputils.SendJSONErrorResponse(w, status, err.Error())
+		return
+	}
+
+	if !body.Valid() {
+		httputils.SendJSONErrorResponse(w, http.StatusBadRequest, "invalid body")
 		return
 	}
 
