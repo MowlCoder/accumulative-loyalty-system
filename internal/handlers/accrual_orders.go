@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -43,6 +44,7 @@ func (h *AccrualOrdersHandler) GetRegisteredOrderInfo(w http.ResponseWriter, r *
 			return
 		}
 
+		log.Println("[GetRegisteredOrderInfo]", err)
 		httputils.SendJSONErrorResponse(w, http.StatusInternalServerError, domain.ErrInternalServer.Error())
 		return
 	}
@@ -75,6 +77,7 @@ func (h *AccrualOrdersHandler) RegisterOrderForAccrual(w http.ResponseWriter, r 
 			return
 		}
 
+		log.Println("[RegisterOrderForAccrual]", err)
 		httputils.SendJSONErrorResponse(w, http.StatusInternalServerError, domain.ErrInternalServer.Error())
 		return
 	}

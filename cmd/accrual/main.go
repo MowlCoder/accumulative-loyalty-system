@@ -33,6 +33,12 @@ func main() {
 		log.Panic(err)
 	}
 
+	err = postgresql.RunMigrations(appConfig.DatabaseURI)
+
+	if err != nil {
+		log.Panic(err)
+	}
+
 	goodRewardRepository := repositories.NewGoodRewardRepository(dbPool)
 	registeredOrdersRepository := repositories.NewRegisteredOrdersRepository(dbPool)
 
