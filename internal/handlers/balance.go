@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/contextutil"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/domain"
@@ -94,6 +95,12 @@ func (h *BalanceHandler) WithdrawBalance(w http.ResponseWriter, r *http.Request)
 	httputils.SendStatusCode(w, http.StatusOK)
 }
 
+type userWithdrawalForResponse struct {
+	Order       string     `json:"order"`
+	Sum         float64    `json:"sum"`
+	ProcessedAt *time.Time `json:"processed_at,omitempty"`
+}
+
 func (h *BalanceHandler) GetWithdrawalHistory(w http.ResponseWriter, r *http.Request) {
 	userID, err := contextutil.GetUserIDFromContext(r.Context())
 
@@ -114,5 +121,15 @@ func (h *BalanceHandler) GetWithdrawalHistory(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	httputils.SendJSONResponse(w, http.StatusOK, withdrawals)
+	responseWithdrawals := make([]userWithdrawalForResponse, 0)
+
+	for _, withdrawal := range withdrawals {
+		responseWithdrawals = append(responseWithdrawals, userWithdrawalForResponse{
+			Order:       withdrawal.OrderID,
+			Sum:         withdrawal.Amount,
+			ProcessedAt: withdrawal.ProcessedAt,
+		})
+	}
+
+	httputils.SendJSONResponse(w, http.StatusOK, responseWithdrawals)
 }

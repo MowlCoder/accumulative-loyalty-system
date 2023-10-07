@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/contextutil"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/domain"
@@ -89,6 +90,13 @@ func (h *OrdersHandler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 	httputils.SendStatusCode(w, http.StatusAccepted)
 }
 
+type orderForResponse struct {
+	Number     string    `json:"number"`
+	Status     string    `json:"status"`
+	Accrual    *float64  `json:"accrual,omitempty"`
+	UploadedAt time.Time `json:"uploaded_at"`
+}
+
 func (h *OrdersHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	userID, err := contextutil.GetUserIDFromContext(r.Context())
 
@@ -109,5 +117,16 @@ func (h *OrdersHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputils.SendJSONResponse(w, http.StatusOK, orders)
+	responseOrders := make([]orderForResponse, 0)
+
+	for _, order := range orders {
+		responseOrders = append(responseOrders, orderForResponse{
+			Number:     order.OrderID,
+			Status:     order.Status,
+			Accrual:    order.Accrual,
+			UploadedAt: order.UploadedAt,
+		})
+	}
+
+	httputils.SendJSONResponse(w, http.StatusOK, responseOrders)
 }
