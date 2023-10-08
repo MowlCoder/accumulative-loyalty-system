@@ -63,7 +63,7 @@ func (r *UserRepository) SaveUser(ctx context.Context, login string, hashedPassw
 		ID:        int(insertedID),
 		Login:     login,
 		Password:  hashedPassword,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 	}, nil
 }
 

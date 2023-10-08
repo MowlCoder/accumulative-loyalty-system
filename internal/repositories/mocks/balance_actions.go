@@ -55,7 +55,7 @@ func (r *BalanceActionRepoMock) Save(ctx context.Context, userID int, orderID st
 		UserID:      userID,
 		Amount:      amount,
 		OrderID:     orderID,
-		CreatedAt:   time.Now(),
+		CreatedAt:   time.Now().UTC(),
 		ProcessedAt: nil,
 	}
 

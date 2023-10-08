@@ -90,6 +90,6 @@ func (r *GoodRewardRepository) SaveReward(
 		Match:      match,
 		Reward:     reward,
 		RewardType: rewardType,
-		CreatedAt:  time.Now(),
+		CreatedAt:  time.Now().UTC(),
 	}, nil
 }

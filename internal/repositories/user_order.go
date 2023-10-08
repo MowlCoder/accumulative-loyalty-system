@@ -100,7 +100,7 @@ func (r *UserOrderRepository) SaveOrder(ctx context.Context, orderID string, use
 		UserID:     userID,
 		Status:     domain.NewOrderStatus,
 		Accrual:    nil,
-		UploadedAt: time.Now(),
+		UploadedAt: time.Now().UTC(),
 	}, nil
 }
 

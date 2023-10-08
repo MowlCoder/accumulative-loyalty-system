@@ -32,7 +32,7 @@ func (r *UserRepoMock) SaveUser(ctx context.Context, login string, hashedPasswor
 		ID:        len(r.Storage) + 1,
 		Login:     login,
 		Password:  hashedPassword,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 	}
 
 	r.Storage = append(r.Storage, newUser)

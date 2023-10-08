@@ -39,7 +39,7 @@ func (r *UserOrderRepoMock) SaveOrder(ctx context.Context, orderID string, userI
 		UserID:     userID,
 		Status:     "NEW",
 		Accrual:    nil,
-		UploadedAt: time.Now(),
+		UploadedAt: time.Now().UTC(),
 	}
 
 	r.Storage = append(r.Storage, *order)
