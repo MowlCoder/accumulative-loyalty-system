@@ -26,9 +26,15 @@ func NewRegisteredOrdersRepository(pool *pgxpool.Pool) *RegisteredOrdersReposito
 func (r *RegisteredOrdersRepository) GetByID(ctx context.Context, orderID string) (*domain.RegisteredOrder, error) {
 	var order domain.RegisteredOrder
 
+	query := `
+		SELECT order_id, status, accrual, created_at
+		FROM registered_orders
+		WHERE order_id = $1
+	`
+
 	err := r.pool.QueryRow(
 		ctx,
-		"SELECT order_id, status, accrual, created_at FROM registered_orders WHERE order_id = $1",
+		query,
 		orderID,
 	).Scan(&order.OrderID, &order.Status, &order.Accrual, &order.CreatedAt)
 
@@ -44,9 +50,15 @@ func (r *RegisteredOrdersRepository) GetByID(ctx context.Context, orderID string
 }
 
 func (r *RegisteredOrdersRepository) SetCalculatedOrderAccrual(ctx context.Context, orderID string, accrual float64) error {
+	query := `
+		UPDATE registered_orders
+		SET status = $1, accrual = $2
+		WHERE order_id = $3
+	`
+
 	_, err := r.pool.Exec(
 		ctx,
-		"UPDATE registered_orders SET status = $1, accrual = $2 WHERE order_id = $3",
+		query,
 		domain.ProcessedRegisteredOrderStatus, accrual, orderID,
 	)
 
@@ -58,9 +70,16 @@ func (r *RegisteredOrdersRepository) SetCalculatedOrderAccrual(ctx context.Conte
 }
 
 func (r *RegisteredOrdersRepository) TakeOrdersForProcessing(ctx context.Context, limit int) ([]domain.RegisteredOrder, error) {
+	query := `
+		SELECT order_id, status, accrual, created_at
+		FROM registered_orders
+		WHERE status = $1 OR status = $2
+		LIMIT $3
+	`
+
 	rows, err := r.pool.Query(
 		ctx,
-		"SELECT order_id, status, accrual, created_at FROM registered_orders WHERE status = $1 OR status = $2 LIMIT $3",
+		query,
 		domain.NewRegisteredOrderStatus, domain.ProcessingRegisteredOrderStatus, limit,
 	)
 
@@ -88,9 +107,15 @@ func (r *RegisteredOrdersRepository) TakeOrdersForProcessing(ctx context.Context
 }
 
 func (r *RegisteredOrdersRepository) ChangeOrdersStatus(ctx context.Context, orderIDs []string, status string) error {
+	query := `
+		UPDATE registered_orders
+		SET status = $1
+		WHERE order_id = ANY($2)
+	`
+
 	_, err := r.pool.Exec(
 		ctx,
-		"UPDATE registered_orders SET status = $1 WHERE order_id = ANY($2)",
+		query,
 		status, orderIDs,
 	)
 
@@ -102,9 +127,15 @@ func (r *RegisteredOrdersRepository) ChangeOrdersStatus(ctx context.Context, ord
 }
 
 func (r *RegisteredOrdersRepository) GetOrderGoods(ctx context.Context, orderID string) ([]domain.OrderGood, error) {
+	query := `
+		SELECT description, price
+		FROM orders_goods
+		WHERE order_id = $1
+	`
+
 	rows, err := r.pool.Query(
 		ctx,
-		"SELECT description, price from orders_goods WHERE order_id = $1",
+		query,
 		orderID,
 	)
 
@@ -144,9 +175,15 @@ func (r *RegisteredOrdersRepository) RegisterOrder(
 
 	var insertedID string
 
+	query := `
+		INSERT INTO registered_orders (order_id, status)
+		VALUES ($1, $2)
+		RETURNING order_id
+	`
+
 	err = tx.QueryRow(
 		ctx,
-		"INSERT INTO registered_orders (order_id, status) VALUES ($1, $2) RETURNING order_id",
+		query,
 		orderID, domain.NewRegisteredOrderStatus,
 	).Scan(&insertedID)
 
@@ -162,9 +199,14 @@ func (r *RegisteredOrdersRepository) RegisterOrder(
 
 	batch := &pgx.Batch{}
 
+	query = `
+		INSERT INTO orders_goods (order_id, description, price)
+		VALUES ($1, $2, $3)
+	`
+
 	for _, good := range goods {
 		batch.Queue(
-			"INSERT INTO orders_goods (order_id, description, price) VALUES ($1, $2, $3)",
+			query,
 			insertedID, good.Description, good.Price,
 		)
 	}
