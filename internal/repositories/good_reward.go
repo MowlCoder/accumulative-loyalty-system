@@ -69,9 +69,15 @@ func (r *GoodRewardRepository) SaveReward(
 ) (*domain.GoodReward, error) {
 	var insertedID int64
 
+	query := `
+        INSERT INTO good_rewards (match, reward, reward_type)
+        VALUES ($1, $2, $3)
+        RETURNING id
+    `
+
 	err := r.pool.QueryRow(
 		ctx,
-		"INSERT INTO good_rewards (match, reward, reward_type) VALUES ($1, $2, $3) RETURNING id",
+		query,
 		match, reward, rewardType,
 	).Scan(&insertedID)
 
