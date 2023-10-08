@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -55,7 +54,8 @@ func (w *OrderAccrualCheckingWorker) Start(ctx context.Context) {
 		for {
 			select {
 			case <-ctx.Done():
-				fmt.Println("DONE")
+				log.Println("[checking_order_accrual] complete")
+				return
 			case <-ticker.C:
 				if w.isResting {
 					continue

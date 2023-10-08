@@ -2,7 +2,6 @@ package workers
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math"
 	"strings"
@@ -45,7 +44,8 @@ func (w *CalculateOrderAccrualWorker) Start(ctx context.Context) {
 		for {
 			select {
 			case <-ctx.Done():
-				fmt.Println("DONE")
+				log.Println("[calculate_order_accrual] complete")
+				return
 			case <-ticker.C:
 				orders, err := w.registeredOrdersRepository.TakeOrdersForProcessing(ctx, 5)
 
