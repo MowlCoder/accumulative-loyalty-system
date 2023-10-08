@@ -23,9 +23,14 @@ func NewBalanceActionsRepository(pool *pgxpool.Pool) *BalanceActionsRepository {
 }
 
 func (r *BalanceActionsRepository) Save(ctx context.Context, userID int, orderID string, amount float64) error {
+	query := `
+        INSERT INTO balance_actions (user_id, amount, order_id, processed_at)
+        VALUES ($1, $2, $3, $4)
+    `
+
 	_, err := r.pool.Exec(
 		ctx,
-		"INSERT INTO balance_actions (user_id, amount, order_id, processed_at) VALUES ($1, $2, $3, $4)",
+		query,
 		userID, amount, orderID, time.Now().UTC(),
 	)
 
@@ -35,9 +40,15 @@ func (r *BalanceActionsRepository) Save(ctx context.Context, userID int, orderID
 func (r *BalanceActionsRepository) GetCurrentBalance(ctx context.Context, userID int) float64 {
 	var amount float64
 
+	query := `
+        SELECT SUM(amount)
+        FROM balance_actions
+        WHERE user_id = $1
+    `
+
 	err := r.pool.QueryRow(
 		ctx,
-		"select SUM(amount) FROM balance_actions WHERE user_id = $1",
+		query,
 		userID,
 	).Scan(&amount)
 
@@ -51,9 +62,15 @@ func (r *BalanceActionsRepository) GetCurrentBalance(ctx context.Context, userID
 func (r *BalanceActionsRepository) GetWithdrawalAmount(ctx context.Context, userID int) float64 {
 	var amount float64
 
+	query := `
+        SELECT SUM(amount)
+        FROM balance_actions
+        WHERE user_id = $1 AND amount < 0
+    `
+
 	err := r.pool.QueryRow(
 		ctx,
-		"select SUM(amount) FROM balance_actions WHERE user_id = $1 AND amount < 0",
+		query,
 		userID,
 	).Scan(&amount)
 
@@ -65,12 +82,16 @@ func (r *BalanceActionsRepository) GetWithdrawalAmount(ctx context.Context, user
 }
 
 func (r *BalanceActionsRepository) GetUserWithdrawals(ctx context.Context, userID int) ([]domain.BalanceAction, error) {
+	query := `
+        SELECT id, order_id, user_id, amount, created_at, processed_at
+        FROM balance_actions
+        WHERE user_id = $1 AND amount < 0
+        ORDER BY created_at DESC
+    `
+
 	rows, err := r.pool.Query(
 		ctx,
-		"SELECT id, order_id, user_id, amount, created_at, processed_at "+
-			"FROM balance_actions "+
-			"WHERE user_id = $1 AND amount < 0 "+
-			"ORDER BY created_at DESC",
+		query,
 		userID,
 	)
 
