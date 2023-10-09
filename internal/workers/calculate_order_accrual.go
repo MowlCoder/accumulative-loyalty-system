@@ -79,6 +79,11 @@ func (w *CalculateOrderAccrualWorker) Start(ctx context.Context) {
 }
 
 func (w *CalculateOrderAccrualWorker) processOrder(ctx context.Context, order *domain.RegisteredOrder) {
+	if order == nil {
+		log.Println("[calculate_order_accrual] provided pointer to order is nil")
+		return
+	}
+
 	goods, err := w.registeredOrdersRepository.GetOrderGoods(ctx, order.OrderID)
 
 	if err != nil {

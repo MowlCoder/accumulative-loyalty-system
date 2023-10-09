@@ -80,6 +80,11 @@ func (w *OrderAccrualCheckingWorker) Start(ctx context.Context) {
 }
 
 func (w *OrderAccrualCheckingWorker) processOrder(ctx context.Context, order *domain.UserOrder) {
+	if order == nil {
+		log.Println("[checking_order_accrual] provided pointer to order is nil")
+		return
+	}
+
 	orderInfo, err := w.getInfoFromAccrualSystem(order.OrderID)
 
 	if err != nil {
@@ -89,6 +94,11 @@ func (w *OrderAccrualCheckingWorker) processOrder(ctx context.Context, order *do
 
 	switch orderInfo.Status {
 	case domain.ProcessedRegisteredOrderStatus:
+		if orderInfo.Accrual == nil {
+			log.Println("[checking_order_accrual] accrual pointer is nil", orderInfo)
+			return
+		}
+
 		err := w.userOrderRepository.SetOrderCalculatingResult(ctx, order.OrderID, domain.ProcessedOrderStatus, *orderInfo.Accrual)
 
 		if err != nil {
