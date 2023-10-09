@@ -20,13 +20,9 @@ type AuthHandler struct {
 	userService userServiceForAuth
 }
 
-type AuthHandlerOptions struct {
-	UserService userServiceForAuth
-}
-
-func NewAuthHandler(options *AuthHandlerOptions) *AuthHandler {
+func NewAuthHandler(userService userServiceForAuth) *AuthHandler {
 	return &AuthHandler{
-		userService: options.UserService,
+		userService: userService,
 	}
 }
 

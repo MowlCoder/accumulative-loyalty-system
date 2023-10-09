@@ -48,16 +48,9 @@ func main() {
 	ordersService := services.NewOrdersService(userOrderRepository)
 	withdrawalService := services.NewWithdrawalsService(balanceActionsRepository)
 
-	authHandler := handlers.NewAuthHandler(&handlers.AuthHandlerOptions{
-		UserService: userService,
-	})
-	balanceHandler := handlers.NewBalanceHandler(&handlers.BalanceHandlerOptions{
-		UserService:       userService,
-		WithdrawalService: withdrawalService,
-	})
-	ordersHandler := handlers.NewOrdersHandler(&handlers.OrdersHandlerOptions{
-		OrdersService: ordersService,
-	})
+	authHandler := handlers.NewAuthHandler(userService)
+	balanceHandler := handlers.NewBalanceHandler(userService, withdrawalService)
+	ordersHandler := handlers.NewOrdersHandler(ordersService)
 
 	ctx := context.Background()
 

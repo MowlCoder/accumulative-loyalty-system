@@ -27,15 +27,10 @@ type BalanceHandler struct {
 	withdrawalService withdrawalServiceForBalance
 }
 
-type BalanceHandlerOptions struct {
-	UserService       userServiceForBalance
-	WithdrawalService withdrawalServiceForBalance
-}
-
-func NewBalanceHandler(options *BalanceHandlerOptions) *BalanceHandler {
+func NewBalanceHandler(userService userServiceForBalance, withdrawalService withdrawalServiceForBalance) *BalanceHandler {
 	return &BalanceHandler{
-		userService:       options.UserService,
-		withdrawalService: options.WithdrawalService,
+		userService:       userService,
+		withdrawalService: withdrawalService,
 	}
 }
 

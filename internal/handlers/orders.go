@@ -24,13 +24,9 @@ type OrdersHandler struct {
 	service ordersService
 }
 
-type OrdersHandlerOptions struct {
-	OrdersService ordersService
-}
-
-func NewOrdersHandler(options *OrdersHandlerOptions) *OrdersHandler {
+func NewOrdersHandler(ordersService ordersService) *OrdersHandler {
 	return &OrdersHandler{
-		service: options.OrdersService,
+		service: ordersService,
 	}
 }
 
