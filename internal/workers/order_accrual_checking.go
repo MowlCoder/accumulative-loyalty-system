@@ -54,6 +54,7 @@ func (w *OrderAccrualCheckingWorker) Start(ctx context.Context) {
 		for {
 			select {
 			case <-ctx.Done():
+				ticker.Stop()
 				log.Println("[checking_order_accrual] complete")
 				return
 			case <-ticker.C:
@@ -70,7 +71,7 @@ func (w *OrderAccrualCheckingWorker) Start(ctx context.Context) {
 
 				for _, order := range orders {
 					go func(o domain.UserOrder) {
-						go w.processOrder(ctx, &o)
+						w.processOrder(ctx, &o)
 					}(order)
 				}
 			}

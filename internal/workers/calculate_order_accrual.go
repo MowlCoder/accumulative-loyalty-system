@@ -44,6 +44,7 @@ func (w *CalculateOrderAccrualWorker) Start(ctx context.Context) {
 		for {
 			select {
 			case <-ctx.Done():
+				ticker.Stop()
 				log.Println("[calculate_order_accrual] complete")
 				return
 			case <-ticker.C:
