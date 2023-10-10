@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/config"
+	"github.com/MowlCoder/accumulative-loyalty-system/internal/facade"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/handlers"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/middlewares"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/repositories"
@@ -52,11 +53,17 @@ func main() {
 	balanceHandler := handlers.NewBalanceHandler(userService, withdrawalService)
 	ordersHandler := handlers.NewOrdersHandler(ordersService)
 
+	orderAccrualFacade := facade.NewOrderAccrualFacade(
+		dbPool,
+		userOrderRepository,
+		balanceActionsRepository,
+	)
+
 	ctx := context.Background()
 
 	orderAccrualCheckingWorker := workers.NewOrderAccrualCheckingWorker(
 		userOrderRepository,
-		balanceActionsRepository,
+		orderAccrualFacade,
 		appConfig.AccrualSystemAddress,
 	)
 	orderAccrualCheckingWorker.Start(ctx)
@@ -66,17 +73,23 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Logger)
 
-	router.Route("/api/user", func(r chi.Router) {
-		r.Post("/register", authHandler.Register)
-		r.Post("/login", authHandler.Login)
-
-		r.Get("/orders", middlewares.AuthMiddleware(http.HandlerFunc(ordersHandler.GetOrders)))
-		r.Post("/orders", middlewares.AuthMiddleware(http.HandlerFunc(ordersHandler.RegisterOrder)))
-
-		r.Get("/balance", middlewares.AuthMiddleware(http.HandlerFunc(balanceHandler.GetUserBalance)))
-		r.Post("/balance/withdraw", middlewares.AuthMiddleware(http.HandlerFunc(balanceHandler.WithdrawBalance)))
-		r.Get("/withdrawals", middlewares.AuthMiddleware(http.HandlerFunc(balanceHandler.GetWithdrawalHistory)))
+	router.Group(func(publicRouter chi.Router) {
+		publicRouter.Post("/register", authHandler.Register)
+		publicRouter.Post("/login", authHandler.Login)
 	})
+
+	router.Group(func(authRouter chi.Router) {
+		authRouter.Use(middlewares.AuthMiddleware)
+
+		authRouter.Get("/orders", ordersHandler.GetOrders)
+		authRouter.Post("/orders", ordersHandler.RegisterOrder)
+
+		authRouter.Get("/balance", balanceHandler.GetUserBalance)
+		authRouter.Post("/balance/withdraw", balanceHandler.WithdrawBalance)
+		authRouter.Get("/withdrawals", balanceHandler.GetWithdrawalHistory)
+	})
+
+	router.Mount("/api/user", router)
 
 	log.Println("Gophermart server is running on", appConfig.RunAddress)
 

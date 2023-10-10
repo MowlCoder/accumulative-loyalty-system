@@ -18,26 +18,26 @@ type userOrderRepository interface {
 	SetOrderCalculatingResult(ctx context.Context, orderID string, status string, accrual float64) error
 }
 
-type balanceActionRepository interface {
-	Save(ctx context.Context, userID int, orderID string, amount float64) error
+type orderAccrualFacade interface {
+	SaveResult(ctx context.Context, order domain.UserOrder, accrual float64) error
 }
 
 type OrderAccrualCheckingWorker struct {
-	userOrderRepository     userOrderRepository
-	balanceActionRepository balanceActionRepository
-	httpClient              *http.Client
-	isResting               bool
-	baseURL                 string
+	userOrderRepository userOrderRepository
+	orderAccrualFacade  orderAccrualFacade
+	httpClient          *http.Client
+	isResting           bool
+	baseURL             string
 }
 
 func NewOrderAccrualCheckingWorker(
 	userOrderRepository userOrderRepository,
-	balanceActionRepository balanceActionRepository,
+	orderAccrualFacade orderAccrualFacade,
 	accrualBaseURL string,
 ) *OrderAccrualCheckingWorker {
 	return &OrderAccrualCheckingWorker{
-		userOrderRepository:     userOrderRepository,
-		balanceActionRepository: balanceActionRepository,
+		userOrderRepository: userOrderRepository,
+		orderAccrualFacade:  orderAccrualFacade,
 		httpClient: &http.Client{
 			Timeout: time.Second * 10,
 		},
@@ -99,17 +99,15 @@ func (w *OrderAccrualCheckingWorker) processOrder(ctx context.Context, order *do
 			return
 		}
 
-		err := w.userOrderRepository.SetOrderCalculatingResult(ctx, order.OrderID, domain.ProcessedOrderStatus, *orderInfo.Accrual)
+		err := w.orderAccrualFacade.SaveResult(
+			ctx,
+			*order,
+			*orderInfo.Accrual,
+		)
 
 		if err != nil {
 			log.Println("[checking_order_accrual] set order calculating result", err)
 			return
-		}
-
-		err = w.balanceActionRepository.Save(ctx, order.UserID, order.OrderID, *orderInfo.Accrual)
-
-		if err != nil {
-			log.Println("[checking_order_accrual] save balance action", err)
 		}
 	case domain.InvalidRegisteredOrderStatus:
 		err := w.userOrderRepository.SetOrderCalculatingResult(ctx, order.OrderID, domain.InvalidOrderStatus, 0)
