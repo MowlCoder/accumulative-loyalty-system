@@ -87,6 +87,10 @@ func (r *UserOrderRepository) SetOrderCalculatingResult(
 		userID, accrual, orderID, time.Now().UTC(),
 	)
 
+	if err != nil {
+		return err
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return err
 	}
