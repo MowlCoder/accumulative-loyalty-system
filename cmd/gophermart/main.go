@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -29,8 +30,6 @@ func main() {
 	if err != nil {
 		log.Println("No .env provided")
 	}
-
-	serverCtx, serverStopCtx := context.WithCancel(context.Background())
 
 	appConfig := &config.GophermartConfig{}
 	appConfig.Parse()
@@ -64,50 +63,60 @@ func main() {
 		userOrderRepository,
 	)
 
+	workersCtx, workersStopCtx := context.WithCancel(context.Background())
+	workersWg := &sync.WaitGroup{}
+
 	orderAccrualCheckingWorker := workers.NewOrderAccrualCheckingWorker(
 		userOrderRepository,
 		orderAccrualFacade,
 		appConfig.AccrualSystemAddress,
+		workersWg,
 	)
-	orderAccrualCheckingWorker.Start(serverCtx)
+	orderAccrualCheckingWorker.Start(workersCtx)
 
 	server := &http.Server{
 		Addr:    appConfig.RunAddress,
 		Handler: makeRouter(authHandler, balanceHandler, ordersHandler),
 	}
 
+	log.Println("Gophermart server is running on", appConfig.RunAddress)
+
+	go func() {
+		err = server.ListenAndServe()
+
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
+	<-sig
+
+	log.Println("start graceful shutdown...")
+
+	shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCtxCancel()
+
 	go func() {
-		<-sig
-		shutdownCtx, shutdownCtxCancel := context.WithTimeout(serverCtx, 30*time.Second)
-		defer shutdownCtxCancel()
-
-		go func() {
-			<-shutdownCtx.Done()
-			if shutdownCtx.Err() == context.DeadlineExceeded {
-				log.Fatal("graceful shutdown timed out.. forcing exit.")
-			}
-		}()
-
-		err := server.Shutdown(shutdownCtx)
-		if err != nil {
-			log.Fatal(err)
+		<-shutdownCtx.Done()
+		if shutdownCtx.Err() == context.DeadlineExceeded {
+			log.Fatal("graceful shutdown timed out... forcing exit")
 		}
-
-		log.Println("gracefully shutdown server")
-		serverStopCtx()
 	}()
 
-	log.Println("Gophermart server is running on", appConfig.RunAddress)
-	err = server.ListenAndServe()
-
-	if err != nil && err != http.ErrServerClosed {
+	err = server.Shutdown(shutdownCtx)
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	<-serverCtx.Done()
+	dbPool.Close()
+
+	workersStopCtx()
+	workersWg.Wait() // Wait to all workers complete their work
+
+	log.Println("graceful shutdown server successfully")
 }
 
 func makeRouter(

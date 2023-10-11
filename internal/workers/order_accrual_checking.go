@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/domain"
@@ -27,12 +29,14 @@ type OrderAccrualCheckingWorker struct {
 	orderAccrualFacade  orderAccrualFacade
 	httpClient          *http.Client
 	baseURL             string
+	wg                  *sync.WaitGroup
 }
 
 func NewOrderAccrualCheckingWorker(
 	userOrderRepository userOrderRepository,
 	orderAccrualFacade orderAccrualFacade,
 	accrualBaseURL string,
+	wg *sync.WaitGroup,
 ) *OrderAccrualCheckingWorker {
 	return &OrderAccrualCheckingWorker{
 		userOrderRepository: userOrderRepository,
@@ -41,6 +45,7 @@ func NewOrderAccrualCheckingWorker(
 			Timeout: time.Second * 10,
 		},
 		baseURL: accrualBaseURL,
+		wg:      wg,
 	}
 }
 
@@ -49,6 +54,7 @@ func (w *OrderAccrualCheckingWorker) Start(ctx context.Context) {
 
 	log.Println("Start checking_order_accrual worker")
 	ticker := time.NewTicker(baseTickerDuration)
+	w.wg.Add(1)
 
 	go func() {
 		defer ticker.Stop()
@@ -57,6 +63,7 @@ func (w *OrderAccrualCheckingWorker) Start(ctx context.Context) {
 			select {
 			case <-ctx.Done():
 				log.Println("[checking_order_accrual]: complete")
+				w.wg.Done()
 				return
 			case <-ticker.C:
 				ticker.Reset(baseTickerDuration)
@@ -94,7 +101,7 @@ func (w *OrderAccrualCheckingWorker) processOrder(ctx context.Context, order *do
 	orderInfo, err := w.getInfoFromAccrualSystem(order.OrderID)
 
 	if err != nil {
-		return err
+		return fmt.Errorf("get info from accrual system %w", err)
 	}
 
 	switch orderInfo.Status {
@@ -110,13 +117,13 @@ func (w *OrderAccrualCheckingWorker) processOrder(ctx context.Context, order *do
 		)
 
 		if err != nil {
-			return err
+			return fmt.Errorf("save order accrual result %w", err)
 		}
 	case domain.InvalidRegisteredOrderStatus:
 		err := w.userOrderRepository.SetOrderCalculatingResult(ctx, order.OrderID, domain.InvalidOrderStatus, 0)
 
 		if err != nil {
-			return err
+			return fmt.Errorf("set invalid order result %w", err)
 		}
 	}
 
