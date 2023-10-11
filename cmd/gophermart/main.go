@@ -4,6 +4,10 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -25,6 +29,8 @@ func main() {
 	if err != nil {
 		log.Println("No .env provided")
 	}
+
+	serverCtx, serverStopCtx := context.WithCancel(context.Background())
 
 	appConfig := &config.GophermartConfig{}
 	appConfig.Parse()
@@ -58,27 +64,70 @@ func main() {
 		userOrderRepository,
 	)
 
-	ctx := context.Background()
-
 	orderAccrualCheckingWorker := workers.NewOrderAccrualCheckingWorker(
 		userOrderRepository,
 		orderAccrualFacade,
 		appConfig.AccrualSystemAddress,
 	)
-	orderAccrualCheckingWorker.Start(ctx)
+	orderAccrualCheckingWorker.Start(serverCtx)
 
+	server := &http.Server{
+		Addr:    appConfig.RunAddress,
+		Handler: makeRouter(authHandler, balanceHandler, ordersHandler),
+	}
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+
+	go func() {
+		<-sig
+		shutdownCtx, _ := context.WithTimeout(serverCtx, 30*time.Second)
+
+		go func() {
+			<-shutdownCtx.Done()
+			if shutdownCtx.Err() == context.DeadlineExceeded {
+				log.Fatal("graceful shutdown timed out.. forcing exit.")
+			}
+		}()
+
+		err := server.Shutdown(shutdownCtx)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Println("gracefully shutdown server")
+		serverStopCtx()
+	}()
+
+	log.Println("Gophermart server is running on", appConfig.RunAddress)
+	err = server.ListenAndServe()
+
+	if err != nil && err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
+
+	<-serverCtx.Done()
+}
+
+func makeRouter(
+	authHandler *handlers.AuthHandler,
+	balanceHandler *handlers.BalanceHandler,
+	ordersHandler *handlers.OrdersHandler,
+) http.Handler {
 	router := chi.NewRouter()
 
 	router.Use(middleware.Recoverer)
-	router.Use(middleware.Logger)
 
 	router.Group(func(publicRouter chi.Router) {
+		publicRouter.Use(middleware.Logger)
+
 		publicRouter.Post("/register", authHandler.Register)
 		publicRouter.Post("/login", authHandler.Login)
 	})
 
 	router.Group(func(authRouter chi.Router) {
 		authRouter.Use(middlewares.AuthMiddleware)
+		authRouter.Use(middleware.Logger)
 
 		authRouter.Get("/orders", ordersHandler.GetOrders)
 		authRouter.Post("/orders", ordersHandler.RegisterOrder)
@@ -90,9 +139,5 @@ func main() {
 
 	router.Mount("/api/user", router)
 
-	log.Println("Gophermart server is running on", appConfig.RunAddress)
-
-	if err := http.ListenAndServe(appConfig.RunAddress, router); err != nil {
-		log.Panic(err)
-	}
+	return router
 }
