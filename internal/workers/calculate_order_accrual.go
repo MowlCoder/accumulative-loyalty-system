@@ -2,6 +2,7 @@ package workers
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math"
 	"strings"
@@ -46,13 +47,13 @@ func (w *CalculateOrderAccrualWorker) Start(ctx context.Context) {
 		for {
 			select {
 			case <-ctx.Done():
-				log.Println("[calculate_order_accrual] complete")
+				log.Println("[calculate_order_accrual]: complete")
 				return
 			case <-ticker.C:
 				orders, err := w.registeredOrdersRepository.TakeOrdersForProcessing(ctx, 5)
 
 				if err != nil {
-					log.Println("[calculate_order_accrual] take orders for processing", err)
+					log.Println("[calculate_order_accrual]: take orders for processing", err)
 					continue
 				}
 
@@ -65,13 +66,17 @@ func (w *CalculateOrderAccrualWorker) Start(ctx context.Context) {
 				err = w.registeredOrdersRepository.ChangeOrdersStatus(ctx, ids, domain.ProcessingOrderStatus)
 
 				if err != nil {
-					log.Println("[calculate_order_accrual] change orders status", err)
+					log.Println("[calculate_order_accrual]: change orders status", err)
 					continue
 				}
 
 				for _, order := range orders {
 					go func(o domain.RegisteredOrder) {
-						w.processOrder(ctx, &o)
+						err := w.processOrder(ctx, &o)
+
+						if err != nil {
+							log.Println("[calculate_order_accrual]:", err)
+						}
 					}(order)
 				}
 			}
@@ -79,17 +84,15 @@ func (w *CalculateOrderAccrualWorker) Start(ctx context.Context) {
 	}()
 }
 
-func (w *CalculateOrderAccrualWorker) processOrder(ctx context.Context, order *domain.RegisteredOrder) {
+func (w *CalculateOrderAccrualWorker) processOrder(ctx context.Context, order *domain.RegisteredOrder) error {
 	if order == nil {
-		log.Println("[calculate_order_accrual] provided pointer to order is nil")
-		return
+		return ErrNilPointerToOrder
 	}
 
 	goods, err := w.registeredOrdersRepository.GetOrderGoods(ctx, order.OrderID)
 
 	if err != nil {
-		log.Println("[calculate_order_accrual] get order goods", err)
-		return
+		return fmt.Errorf("get order goods %w", err)
 	}
 
 	descriptions := make([]string, len(goods))
@@ -101,8 +104,7 @@ func (w *CalculateOrderAccrualWorker) processOrder(ctx context.Context, order *d
 	rewards, err := w.goodRewardRepository.GetRewardsWithMatches(ctx, descriptions)
 
 	if err != nil {
-		log.Println("[calculate_order_accrual] get rewards with matches", err)
-		return
+		return fmt.Errorf("get rewards with matches %w", err)
 	}
 
 	var accrual float64
@@ -114,9 +116,9 @@ func (w *CalculateOrderAccrualWorker) processOrder(ctx context.Context, order *d
 			}
 
 			switch reward.RewardType {
-			case "%":
+			case domain.PercentRewardType:
 				accrual += good.Price * (reward.Reward / 100)
-			case "pt":
+			case domain.PointRewardType:
 				accrual += reward.Reward
 			}
 		}
@@ -125,7 +127,8 @@ func (w *CalculateOrderAccrualWorker) processOrder(ctx context.Context, order *d
 	err = w.registeredOrdersRepository.SetCalculatedOrderAccrual(ctx, order.OrderID, math.Round(accrual*100)/100)
 
 	if err != nil {
-		log.Println("[calculate_order_accrual] set calculated order accrual", err)
-		return
+		return fmt.Errorf("set calculated order accrual %w", err)
 	}
+
+	return nil
 }

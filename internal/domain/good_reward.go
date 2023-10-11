@@ -2,9 +2,14 @@ package domain
 
 import "time"
 
+const (
+	PercentRewardType = "%"
+	PointRewardType   = "pt"
+)
+
 var validRewardTypes = map[string]struct{}{
-	"%":  {},
-	"pt": {},
+	PercentRewardType: {},
+	PointRewardType:   {},
 }
 
 type GoodReward struct {
