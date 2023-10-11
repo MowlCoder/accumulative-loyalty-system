@@ -71,13 +71,12 @@ func (w *OrderAccrualCheckingWorker) Start(ctx context.Context) {
 					go func(o domain.UserOrder) {
 						err := w.processOrder(ctx, &o)
 
-						var retryAfterError domain.RetryAfterError
-
-						if errors.As(err, &retryAfterError) {
-							ticker.Reset(time.Second * time.Duration(retryAfterError.Seconds))
-						}
-
 						if err != nil {
+							var retryAfterError domain.RetryAfterError
+							if errors.As(err, &retryAfterError) {
+								ticker.Reset(time.Second * time.Duration(retryAfterError.Seconds))
+							}
+
 							log.Println("[checking_order_accrual]:", err)
 						}
 					}(order)
