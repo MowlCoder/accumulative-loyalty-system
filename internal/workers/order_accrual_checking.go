@@ -89,7 +89,7 @@ func (w *OrderAccrualCheckingWorker) Start(ctx context.Context) {
 
 func (w *OrderAccrualCheckingWorker) processOrder(ctx context.Context, order *domain.UserOrder) error {
 	if order == nil {
-		return NilPointerToOrderErr
+		return ErrNilPointerToOrder
 	}
 
 	orderInfo, err := w.getInfoFromAccrualSystem(order.OrderID)
@@ -101,7 +101,7 @@ func (w *OrderAccrualCheckingWorker) processOrder(ctx context.Context, order *do
 	switch orderInfo.Status {
 	case domain.ProcessedRegisteredOrderStatus:
 		if orderInfo.Accrual == nil {
-			return NilPointerToAccrualErr
+			return ErrNilPointerToAccrual
 		}
 
 		err := w.orderAccrualFacade.SaveResult(
@@ -176,6 +176,6 @@ type AccrualOrderInfo struct {
 }
 
 var (
-	NilPointerToOrderErr   = errors.New("provided pointer to order is nil")
-	NilPointerToAccrualErr = errors.New("provided pointer to accrual is nil")
+	ErrNilPointerToOrder   = errors.New("provided pointer to order is nil")
+	ErrNilPointerToAccrual = errors.New("provided pointer to accrual is nil")
 )
