@@ -5,7 +5,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/domain"
@@ -30,21 +29,6 @@ func (r *BalanceActionsRepository) Save(ctx context.Context, userID int, orderID
 	`
 
 	_, err := r.pool.Exec(
-		ctx,
-		query,
-		userID, amount, orderID, time.Now().UTC(),
-	)
-
-	return err
-}
-
-func (r *BalanceActionsRepository) SaveTx(ctx context.Context, tx pgx.Tx, userID int, orderID string, amount float64) error {
-	query := `
-	   INSERT INTO balance_actions (user_id, amount, order_id, processed_at)
-	   VALUES ($1, $2, $3, $4)
-	`
-
-	_, err := tx.Exec(
 		ctx,
 		query,
 		userID, amount, orderID, time.Now().UTC(),

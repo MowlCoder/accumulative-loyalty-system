@@ -26,7 +26,6 @@ type OrderAccrualCheckingWorker struct {
 	userOrderRepository userOrderRepository
 	orderAccrualFacade  orderAccrualFacade
 	httpClient          *http.Client
-	isResting           bool
 	baseURL             string
 }
 
@@ -41,37 +40,46 @@ func NewOrderAccrualCheckingWorker(
 		httpClient: &http.Client{
 			Timeout: time.Second * 10,
 		},
-		baseURL:   accrualBaseURL,
-		isResting: false,
+		baseURL: accrualBaseURL,
 	}
 }
 
 func (w *OrderAccrualCheckingWorker) Start(ctx context.Context) {
+	baseTickerDuration := time.Second * 5
+
 	log.Println("Start checking_order_accrual worker")
-	ticker := time.NewTicker(time.Second * 5)
+	ticker := time.NewTicker(baseTickerDuration)
 
 	go func() {
+		defer ticker.Stop()
+
 		for {
 			select {
 			case <-ctx.Done():
-				ticker.Stop()
-				log.Println("[checking_order_accrual] complete")
+				log.Println("[checking_order_accrual]: complete")
 				return
 			case <-ticker.C:
-				if w.isResting {
-					continue
-				}
-
+				ticker.Reset(baseTickerDuration)
 				orders, err := w.userOrderRepository.TakeOrdersForProcessing(ctx)
 
 				if err != nil {
-					log.Println("[checking_order_accrual] take orders for processing", err)
+					log.Println("[checking_order_accrual]: take orders for processing", err)
 					continue
 				}
 
 				for _, order := range orders {
 					go func(o domain.UserOrder) {
-						w.processOrder(ctx, &o)
+						err := w.processOrder(ctx, &o)
+
+						var retryAfterError domain.RetryAfterError
+
+						if errors.As(err, &retryAfterError) {
+							ticker.Reset(time.Second * time.Duration(retryAfterError.Seconds))
+						}
+
+						if err != nil {
+							log.Println("[checking_order_accrual]:", err)
+						}
 					}(order)
 				}
 			}
@@ -79,24 +87,21 @@ func (w *OrderAccrualCheckingWorker) Start(ctx context.Context) {
 	}()
 }
 
-func (w *OrderAccrualCheckingWorker) processOrder(ctx context.Context, order *domain.UserOrder) {
+func (w *OrderAccrualCheckingWorker) processOrder(ctx context.Context, order *domain.UserOrder) error {
 	if order == nil {
-		log.Println("[checking_order_accrual] provided pointer to order is nil")
-		return
+		return NilPointerToOrderErr
 	}
 
 	orderInfo, err := w.getInfoFromAccrualSystem(order.OrderID)
 
 	if err != nil {
-		log.Println("[checking_order_accrual] get info from accrual system", err)
-		return
+		return err
 	}
 
 	switch orderInfo.Status {
 	case domain.ProcessedRegisteredOrderStatus:
 		if orderInfo.Accrual == nil {
-			log.Println("[checking_order_accrual] accrual pointer is nil", orderInfo)
-			return
+			return NilPointerToAccrualErr
 		}
 
 		err := w.orderAccrualFacade.SaveResult(
@@ -106,16 +111,17 @@ func (w *OrderAccrualCheckingWorker) processOrder(ctx context.Context, order *do
 		)
 
 		if err != nil {
-			log.Println("[checking_order_accrual] set order calculating result", err)
-			return
+			return err
 		}
 	case domain.InvalidRegisteredOrderStatus:
 		err := w.userOrderRepository.SetOrderCalculatingResult(ctx, order.OrderID, domain.InvalidOrderStatus, 0)
 
 		if err != nil {
-			log.Println("[checking_order_accrual] set order calculating result", err)
+			return err
 		}
 	}
+
+	return nil
 }
 
 func (w *OrderAccrualCheckingWorker) getInfoFromAccrualSystem(orderID string) (*AccrualOrderInfo, error) {
@@ -135,13 +141,14 @@ func (w *OrderAccrualCheckingWorker) getInfoFromAccrualSystem(orderID string) (*
 
 	if response.StatusCode > 299 {
 		if response.StatusCode == http.StatusTooManyRequests {
+			var retryAfter int
 			retryAfter, err := strconv.Atoi(response.Header.Get("Retry-After"))
 
-			if err != nil {
-				w.putWorkerToRest(60)
-			} else {
-				w.putWorkerToRest(retryAfter)
+			if err != nil || retryAfter <= 0 {
+				retryAfter = 60
 			}
+
+			return nil, domain.RetryAfterError{Seconds: retryAfter}
 		}
 
 		body, err := io.ReadAll(response.Body)
@@ -162,17 +169,13 @@ func (w *OrderAccrualCheckingWorker) getInfoFromAccrualSystem(orderID string) (*
 	return &responseBody, nil
 }
 
-func (w *OrderAccrualCheckingWorker) putWorkerToRest(seconds int) {
-	log.Println("[checking_order_accrual] putting worker to rest for", seconds, "seconds")
-
-	w.isResting = true
-	timer := time.NewTimer(time.Second * time.Duration(seconds))
-	<-timer.C
-	w.isResting = false
-}
-
 type AccrualOrderInfo struct {
 	Order   string   `json:"order"`
 	Status  string   `json:"status"`
 	Accrual *float64 `json:"accrual"`
 }
+
+var (
+	NilPointerToOrderErr   = errors.New("provided pointer to order is nil")
+	NilPointerToAccrualErr = errors.New("provided pointer to accrual is nil")
+)

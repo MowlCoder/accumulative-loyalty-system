@@ -1,6 +1,9 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
 	ErrLoginAlreadyTaken                = errors.New("login already taken")
@@ -13,3 +16,11 @@ var (
 	ErrOrderAlreadyRegisteredForAccrual = errors.New("order already registered for accrual")
 	ErrInternalServer                   = errors.New("internal server error")
 )
+
+type RetryAfterError struct {
+	Seconds int
+}
+
+func (a RetryAfterError) Error() string {
+	return fmt.Sprintf("retry after %d seconds", a.Seconds)
+}

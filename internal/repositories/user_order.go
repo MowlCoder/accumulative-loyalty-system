@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/domain"
@@ -44,40 +43,51 @@ func (r *UserOrderRepository) GetByOrderID(ctx context.Context, orderID string) 
 	return &userOrder, nil
 }
 
-func (r *UserOrderRepository) SetOrderCalculatingResult(ctx context.Context, orderID string, status string, accrual float64) error {
-	query := `
-		UPDATE user_orders
-		SET status = $1, accrual = $2
-		WHERE order_id = $3
-	`
-
-	_, err := r.pool.Exec(
-		ctx,
-		query,
-		status, accrual, orderID,
-	)
+func (r *UserOrderRepository) SetOrderCalculatingResult(
+	ctx context.Context,
+	orderID string,
+	status string,
+	accrual float64,
+) error {
+	tx, err := r.pool.Begin(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	return nil
-}
+	defer tx.Rollback(ctx)
 
-func (r *UserOrderRepository) SetOrderCalculatingResultTx(ctx context.Context, tx pgx.Tx, orderID string, status string, accrual float64) error {
 	query := `
 		UPDATE user_orders
 		SET status = $1, accrual = $2
 		WHERE order_id = $3
+		RETURNING user_id
 	`
 
-	_, err := tx.Exec(
+	var userID int
+
+	err = tx.QueryRow(
 		ctx,
 		query,
 		status, accrual, orderID,
-	)
+	).Scan(&userID)
 
 	if err != nil {
+		return err
+	}
+
+	query = `
+	   INSERT INTO balance_actions (user_id, amount, order_id, processed_at)
+	   VALUES ($1, $2, $3, $4)
+	`
+
+	_, err = tx.Exec(
+		ctx,
+		query,
+		userID, accrual, orderID, time.Now().UTC(),
+	)
+
+	if err := tx.Commit(ctx); err != nil {
 		return err
 	}
 

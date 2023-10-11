@@ -56,7 +56,6 @@ func main() {
 	orderAccrualFacade := facade.NewOrderAccrualFacade(
 		dbPool,
 		userOrderRepository,
-		balanceActionsRepository,
 	)
 
 	ctx := context.Background()
