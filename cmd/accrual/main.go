@@ -23,7 +23,7 @@ import (
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/storage/postgresql"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/workers"
 
-	_ "github.com/MowlCoder/accumulative-loyalty-system/cmd/accrual/docs"
+	_ "github.com/MowlCoder/accumulative-loyalty-system/docs/accrual"
 )
 
 func main() {
