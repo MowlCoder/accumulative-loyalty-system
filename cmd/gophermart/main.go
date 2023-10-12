@@ -33,14 +33,12 @@ func main() {
 	appConfig.Parse()
 
 	dbPool, err := postgresql.InitPool(appConfig.DatabaseURI)
-	defer dbPool.Close()
-
 	if err != nil {
 		log.Panic(err)
 	}
+	defer dbPool.Close()
 
 	err = postgresql.RunMigrations(appConfig.DatabaseURI)
-
 	if err != nil {
 		log.Panic(err)
 	}
