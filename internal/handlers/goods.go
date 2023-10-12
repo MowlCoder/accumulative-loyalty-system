@@ -39,6 +39,17 @@ func (b *saveNewGoodRewardBody) Valid() bool {
 	return true
 }
 
+// SaveNewGoodReward godoc
+// @Summary Save new good reward
+// @Tags goods
+// @Accept json
+// @Produce json
+// @Param dto body saveNewGoodRewardBody true "Add new Good Reward"
+// @Success 200 {object} domain.GoodReward
+// @Failure 400 {object} httputils.HTTPError
+// @Failure 409 {object} httputils.HTTPError
+// @Failure 500 {object} httputils.HTTPError
+// @Router /goods [post]
 func (h *GoodsHandler) SaveNewGoodReward(w http.ResponseWriter, r *http.Request) {
 	var body saveNewGoodRewardBody
 

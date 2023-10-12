@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/config"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/handlers"
@@ -20,6 +22,8 @@ import (
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/services"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/storage/postgresql"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/workers"
+
+	_ "github.com/MowlCoder/accumulative-loyalty-system/cmd/accrual/docs"
 )
 
 func main() {
@@ -64,7 +68,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:    appConfig.RunAddress,
-		Handler: makeRouter(goodsHandler, accrualOrdersHandler),
+		Handler: makeRouter(appConfig, goodsHandler, accrualOrdersHandler),
 	}
 
 	log.Println("Accrual server is running on", appConfig.RunAddress)
@@ -104,7 +108,12 @@ func main() {
 	log.Println("graceful shutdown server successfully")
 }
 
+// @title Gophermart Accrual Service
+// @version 1.0
+// @description Accrual service responsible for calculating accrual for registered orders
+// @BasePath /api
 func makeRouter(
+	appConfig *config.AccrualConfig,
 	goodsHandler *handlers.GoodsHandler,
 	accrualOrdersHandler *handlers.AccrualOrdersHandler,
 ) http.Handler {
@@ -121,6 +130,10 @@ func makeRouter(
 		r.Get("/{orderID}", middlewares.RateLimit(http.HandlerFunc(accrualOrdersHandler.GetRegisteredOrderInfo)))
 		r.Post("/", accrualOrdersHandler.RegisterOrderForAccrual)
 	})
+
+	router.Get("/swagger/*", httpSwagger.Handler(
+		httpSwagger.URL(fmt.Sprintf("http://%s/swagger/doc.json", appConfig.RunAddress)),
+	))
 
 	return router
 }

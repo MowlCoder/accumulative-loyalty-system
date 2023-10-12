@@ -34,6 +34,15 @@ type getRegisteredOrderInfoResponse struct {
 	Accrual *float64 `json:"accrual,omitempty"`
 }
 
+// GetRegisteredOrderInfo godoc
+// @Summary Get registered order info
+// @Tags order
+// @Produce json
+// @Param orderID path string true "Order ID"
+// @Success 200 {object} getRegisteredOrderInfoResponse
+// @Failure 204
+// @Failure 500 {object} httputils.HTTPError
+// @Router /orders/{orderID} [get]
 func (h *AccrualOrdersHandler) GetRegisteredOrderInfo(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "orderID")
 	order, err := h.service.GetOrderInfo(r.Context(), orderID)
@@ -69,6 +78,17 @@ func (b *registerOrderForAccrualBody) Valid() bool {
 	return true
 }
 
+// RegisterOrderForAccrual godoc
+// @Summary Register order for accrual
+// @Tags order
+// @Accept json
+// @Produce json
+// @Param dto body registerOrderForAccrualBody true "Register Order for accrual"
+// @Success 202 {object} domain.RegisteredOrder
+// @Failure 400 {object} httputils.HTTPError
+// @Failure 409 {object} httputils.HTTPError
+// @Failure 500 {object} httputils.HTTPError
+// @Router /orders [post]
 func (h *AccrualOrdersHandler) RegisterOrderForAccrual(w http.ResponseWriter, r *http.Request) {
 	var body registerOrderForAccrualBody
 

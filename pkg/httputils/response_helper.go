@@ -6,6 +6,10 @@ import (
 	"net/http"
 )
 
+type HTTPError struct {
+	Error string `json:"error"`
+}
+
 func SendTextResponse(w http.ResponseWriter, code int, text string) error {
 	w.Header().Set("content-type", "text/plain")
 	w.WriteHeader(code)
@@ -36,9 +40,7 @@ func SendJSONResponse(w http.ResponseWriter, code int, data interface{}) error {
 }
 
 func SendJSONErrorResponse(w http.ResponseWriter, code int, error string) error {
-	return SendJSONResponse(w, code, map[string]string{
-		"error": error,
-	})
+	return SendJSONResponse(w, code, HTTPError{Error: error})
 }
 
 func SendRedirectResponse(w http.ResponseWriter, location string) {
