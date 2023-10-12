@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/config"
-	"github.com/MowlCoder/accumulative-loyalty-system/internal/facade"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/handlers"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/middlewares"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/repositories"
@@ -35,6 +33,7 @@ func main() {
 	appConfig.Parse()
 
 	dbPool, err := postgresql.InitPool(appConfig.DatabaseURI)
+	defer dbPool.Close()
 
 	if err != nil {
 		log.Panic(err)
@@ -58,21 +57,13 @@ func main() {
 	balanceHandler := handlers.NewBalanceHandler(userService, withdrawalService)
 	ordersHandler := handlers.NewOrdersHandler(ordersService)
 
-	orderAccrualFacade := facade.NewOrderAccrualFacade(
-		dbPool,
-		userOrderRepository,
-	)
-
 	workersCtx, workersStopCtx := context.WithCancel(context.Background())
-	workersWg := &sync.WaitGroup{}
 
 	orderAccrualCheckingWorker := workers.NewOrderAccrualCheckingWorker(
 		userOrderRepository,
-		orderAccrualFacade,
 		appConfig.AccrualSystemAddress,
-		workersWg,
 	)
-	orderAccrualCheckingWorker.Start(workersCtx)
+	go orderAccrualCheckingWorker.Start(workersCtx)
 
 	server := &http.Server{
 		Addr:    appConfig.RunAddress,
@@ -111,10 +102,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	dbPool.Close()
-
 	workersStopCtx()
-	workersWg.Wait() // Wait to all workers complete their work
 
 	log.Println("graceful shutdown server successfully")
 }

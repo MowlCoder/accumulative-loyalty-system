@@ -4,6 +4,10 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -29,6 +33,7 @@ func main() {
 	appConfig.Parse()
 
 	dbPool, err := postgresql.InitPool(appConfig.DatabaseURI)
+	defer dbPool.Close()
 
 	if err != nil {
 		log.Panic(err)
@@ -49,14 +54,60 @@ func main() {
 	goodsHandler := handlers.NewGoodsHandler(goodRewardsService)
 	accrualOrdersHandler := handlers.NewAccrualOrdersHandler(accrualOrdersService)
 
-	ctx := context.Background()
+	workersCtx, workersStopCtx := context.WithCancel(context.Background())
 
 	calculateOrderAccrualWorker := workers.NewCalculateOrderAccrualWorker(
 		registeredOrdersRepository,
 		goodRewardRepository,
 	)
-	calculateOrderAccrualWorker.Start(ctx)
+	go calculateOrderAccrualWorker.Start(workersCtx)
 
+	server := &http.Server{
+		Addr:    appConfig.RunAddress,
+		Handler: makeRouter(goodsHandler, accrualOrdersHandler),
+	}
+
+	log.Println("Accrual server is running on", appConfig.RunAddress)
+
+	go func() {
+		err = server.ListenAndServe()
+
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+
+	<-sig
+
+	log.Println("start graceful shutdown...")
+
+	shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCtxCancel()
+
+	go func() {
+		<-shutdownCtx.Done()
+		if shutdownCtx.Err() == context.DeadlineExceeded {
+			log.Fatal("graceful shutdown timed out... forcing exit")
+		}
+	}()
+
+	err = server.Shutdown(shutdownCtx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	workersStopCtx()
+
+	log.Println("graceful shutdown server successfully")
+}
+
+func makeRouter(
+	goodsHandler *handlers.GoodsHandler,
+	accrualOrdersHandler *handlers.AccrualOrdersHandler,
+) http.Handler {
 	router := chi.NewRouter()
 
 	router.Use(middleware.Recoverer)
@@ -71,9 +122,5 @@ func main() {
 		r.Post("/", accrualOrdersHandler.RegisterOrderForAccrual)
 	})
 
-	log.Println("Accrual server is running on", appConfig.RunAddress)
-
-	if err := http.ListenAndServe(appConfig.RunAddress, router); err != nil {
-		log.Panic(err)
-	}
+	return router
 }

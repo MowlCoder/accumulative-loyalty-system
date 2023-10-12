@@ -40,48 +40,45 @@ func NewCalculateOrderAccrualWorker(
 func (w *CalculateOrderAccrualWorker) Start(ctx context.Context) {
 	log.Println("Start calculate_order_accrual worker")
 	ticker := time.NewTicker(time.Second * 5)
+	defer ticker.Stop()
 
-	go func() {
-		defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("[calculate_order_accrual]: complete")
+			return
+		case <-ticker.C:
+			orders, err := w.registeredOrdersRepository.TakeOrdersForProcessing(ctx, 5)
 
-		for {
-			select {
-			case <-ctx.Done():
-				log.Println("[calculate_order_accrual]: complete")
-				return
-			case <-ticker.C:
-				orders, err := w.registeredOrdersRepository.TakeOrdersForProcessing(ctx, 5)
+			if err != nil {
+				log.Println("[calculate_order_accrual]: take orders for processing", err)
+				continue
+			}
 
-				if err != nil {
-					log.Println("[calculate_order_accrual]: take orders for processing", err)
-					continue
-				}
+			ids := make([]string, len(orders))
 
-				ids := make([]string, len(orders))
+			for i := 0; i < len(ids); i++ {
+				ids[i] = orders[i].OrderID
+			}
 
-				for i := 0; i < len(ids); i++ {
-					ids[i] = orders[i].OrderID
-				}
+			err = w.registeredOrdersRepository.ChangeOrdersStatus(ctx, ids, domain.ProcessingOrderStatus)
 
-				err = w.registeredOrdersRepository.ChangeOrdersStatus(ctx, ids, domain.ProcessingOrderStatus)
+			if err != nil {
+				log.Println("[calculate_order_accrual]: change orders status", err)
+				continue
+			}
 
-				if err != nil {
-					log.Println("[calculate_order_accrual]: change orders status", err)
-					continue
-				}
+			for _, order := range orders {
+				go func(o domain.RegisteredOrder) {
+					err := w.processOrder(ctx, &o)
 
-				for _, order := range orders {
-					go func(o domain.RegisteredOrder) {
-						err := w.processOrder(ctx, &o)
-
-						if err != nil {
-							log.Println("[calculate_order_accrual]:", err)
-						}
-					}(order)
-				}
+					if err != nil {
+						log.Println("[calculate_order_accrual]:", err)
+					}
+				}(order)
 			}
 		}
-	}()
+	}
 }
 
 func (w *CalculateOrderAccrualWorker) processOrder(ctx context.Context, order *domain.RegisteredOrder) error {
