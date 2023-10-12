@@ -34,6 +34,21 @@ type registerOrderBody struct {
 	OrderID string `json:"order_id"`
 }
 
+// RegisterOrder godoc
+// @Summary Register order in loyalty system
+// @Tags orders
+// @Accept json
+// @Produce json
+// @Param dto body registerOrderBody true "Register order in system"
+// @Security BearerAuth
+// @Success 200
+// @Success 201
+// @Failure 400 {object} httputils.HTTPError
+// @Failure 401 {object} httputils.HTTPError
+// @Failure 409 {object} httputils.HTTPError
+// @Failure 422 {object} httputils.HTTPError
+// @Failure 500 {object} httputils.HTTPError
+// @Router /orders [post]
 func (h *OrdersHandler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 	orderID := ""
 
@@ -94,6 +109,16 @@ type orderForResponse struct {
 	UploadedAt time.Time `json:"uploaded_at"`
 }
 
+// GetOrders godoc
+// @Summary Get user registered orders
+// @Tags orders
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} orderForResponse
+// @Success 204
+// @Failure 401 {object} httputils.HTTPError
+// @Failure 500 {object} httputils.HTTPError
+// @Router /orders [get]
 func (h *OrdersHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	userID, err := contextutil.GetUserIDFromContext(r.Context())
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/config"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/handlers"
@@ -20,6 +22,8 @@ import (
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/services"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/storage/postgresql"
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/workers"
+
+	_ "github.com/MowlCoder/accumulative-loyalty-system/docs/gophermart"
 )
 
 func main() {
@@ -65,7 +69,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:    appConfig.RunAddress,
-		Handler: makeRouter(authHandler, balanceHandler, ordersHandler),
+		Handler: makeRouter(appConfig, authHandler, balanceHandler, ordersHandler),
 	}
 
 	log.Println("Gophermart server is running on", appConfig.RunAddress)
@@ -105,7 +109,15 @@ func main() {
 	log.Println("graceful shutdown server successfully")
 }
 
+// @title Gophermart Loyalty Service
+// @version 1.0
+// @description Gophermart Loyalty Service responsible for saving user orders, saving user balance and withdraw balance
+// @BasePath /api/user
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func makeRouter(
+	appConfig *config.GophermartConfig,
 	authHandler *handlers.AuthHandler,
 	balanceHandler *handlers.BalanceHandler,
 	ordersHandler *handlers.OrdersHandler,
@@ -134,6 +146,10 @@ func makeRouter(
 	})
 
 	router.Mount("/api/user", router)
+
+	router.Get("/swagger/*", httpSwagger.Handler(
+		httpSwagger.URL(fmt.Sprintf("http://%s/swagger/doc.json", appConfig.RunAddress)),
+	))
 
 	return router
 }

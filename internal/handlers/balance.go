@@ -34,6 +34,15 @@ func NewBalanceHandler(userService userServiceForBalance, withdrawalService with
 	}
 }
 
+// GetUserBalance godoc
+// @Summary Get user balance
+// @Tags balance
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} domain.UserBalance
+// @Failure 401 {object} httputils.HTTPError
+// @Failure 500 {object} httputils.HTTPError
+// @Router /balance [get]
 func (h *BalanceHandler) GetUserBalance(w http.ResponseWriter, r *http.Request) {
 	userID, err := contextutil.GetUserIDFromContext(r.Context())
 
@@ -64,6 +73,19 @@ func (b *withdrawBalanceBody) Valid() bool {
 	return true
 }
 
+// WithdrawBalance godoc
+// @Summary Withdraw balance from account
+// @Tags balance
+// @Accept json
+// @Produce json
+// @Param dto body withdrawBalanceBody true "Withdraw from balance"
+// @Security BearerAuth
+// @Success 200
+// @Failure 400 {object} httputils.HTTPError
+// @Failure 401 {object} httputils.HTTPError
+// @Failure 402 {object} httputils.HTTPError
+// @Failure 500 {object} httputils.HTTPError
+// @Router /balance/withdraw [post]
 func (h *BalanceHandler) WithdrawBalance(w http.ResponseWriter, r *http.Request) {
 	var body withdrawBalanceBody
 
@@ -109,6 +131,16 @@ type userWithdrawalForResponse struct {
 	ProcessedAt *time.Time `json:"processed_at,omitempty"`
 }
 
+// GetWithdrawalHistory godoc
+// @Summary Get user withdrawals history
+// @Tags balance
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} userWithdrawalForResponse
+// @Success 204
+// @Failure 401 {object} httputils.HTTPError
+// @Failure 500 {object} httputils.HTTPError
+// @Router /withdrawals [get]
 func (h *BalanceHandler) GetWithdrawalHistory(w http.ResponseWriter, r *http.Request) {
 	userID, err := contextutil.GetUserIDFromContext(r.Context())
 

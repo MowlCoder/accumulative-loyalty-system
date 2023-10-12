@@ -43,6 +43,17 @@ type registerResponse struct {
 	AccessToken string `json:"access_token"`
 }
 
+// Register godoc
+// @Summary Register new user
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param dto body registerBody true "Register new user"
+// @Success 200 {object} registerResponse
+// @Failure 400 {object} httputils.HTTPError
+// @Failure 409 {object} httputils.HTTPError
+// @Failure 500 {object} httputils.HTTPError
+// @Router /register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var body registerBody
 
@@ -101,6 +112,17 @@ type loginResponse struct {
 	AccessToken string `json:"access_token"`
 }
 
+// Login godoc
+// @Summary Login to account by credentials
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param dto body loginBody true "Login to account"
+// @Success 200 {object} loginResponse
+// @Failure 400 {object} httputils.HTTPError
+// @Failure 401 {object} httputils.HTTPError
+// @Failure 500 {object} httputils.HTTPError
+// @Router /login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var body loginBody
 
