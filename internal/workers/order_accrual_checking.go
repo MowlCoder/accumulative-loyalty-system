@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/domain"
@@ -61,7 +62,7 @@ func (w *OrderAccrualCheckingWorker) Start(ctx context.Context) {
 			}
 
 			wg := &sync.WaitGroup{}
-			waitSeconds := 0
+			waitSeconds := atomic.Int32{}
 
 			for _, order := range orders {
 				wg.Add(1)
@@ -71,7 +72,7 @@ func (w *OrderAccrualCheckingWorker) Start(ctx context.Context) {
 					if err := w.processOrder(ctx, &o); err != nil {
 						var retryAfterError domain.RetryAfterError
 						if errors.As(err, &retryAfterError) {
-							waitSeconds = retryAfterError.Seconds
+							waitSeconds.Store(int32(retryAfterError.Seconds))
 						}
 
 						log.Println("[checking_order_accrual]:", err)
@@ -81,8 +82,8 @@ func (w *OrderAccrualCheckingWorker) Start(ctx context.Context) {
 
 			wg.Wait()
 
-			if waitSeconds != 0 {
-				ticker.Reset(time.Second * time.Duration(waitSeconds))
+			if waitSeconds.Load() != 0 {
+				ticker.Reset(time.Second * time.Duration(waitSeconds.Load()))
 			}
 		}
 	}

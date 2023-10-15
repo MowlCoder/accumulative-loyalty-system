@@ -128,6 +128,7 @@ func makeRouter(
 
 	router.Group(func(publicRouter chi.Router) {
 		publicRouter.Use(middleware.Logger)
+		publicRouter.Use(middleware.Compress(5, "gzip"))
 
 		publicRouter.Post("/register", authHandler.Register)
 		publicRouter.Post("/login", authHandler.Login)
@@ -136,6 +137,7 @@ func makeRouter(
 	router.Group(func(authRouter chi.Router) {
 		authRouter.Use(middlewares.AuthMiddleware)
 		authRouter.Use(middleware.Logger)
+		authRouter.Use(middleware.Compress(5, "gzip"))
 
 		authRouter.Get("/orders", ordersHandler.GetOrders)
 		authRouter.Post("/orders", ordersHandler.RegisterOrder)

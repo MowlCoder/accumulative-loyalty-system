@@ -6,127 +6,150 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/domain"
-	"github.com/MowlCoder/accumulative-loyalty-system/internal/repositories/mocks"
+	repomock "github.com/MowlCoder/accumulative-loyalty-system/internal/services/mocks"
 )
 
 func TestUserService_Register(t *testing.T) {
-	userRepo := &mocks.UserRepoMock{
-		Storage: []domain.User{},
-	}
+	ctrl := gomock.NewController(t)
 
-	balanceActionRepo := &mocks.BalanceActionRepoMock{
-		Storage: []domain.BalanceAction{},
-	}
+	userRepo := repomock.NewMockuserRepository(ctrl)
+	balanceActionRepo := repomock.NewMockbalanceActionsRepositoryForUser(ctrl)
 
 	service := NewUserService(userRepo, balanceActionRepo)
 
 	t.Run("valid", func(t *testing.T) {
-		user, err := service.Register(context.Background(), "User", "User123")
+		login := "User"
+		password := "User123"
+
+		userRepo.
+			EXPECT().
+			SaveUser(context.Background(), login, gomock.Any()).
+			Return(&domain.User{Login: login}, nil)
+		user, err := service.Register(context.Background(), login, password)
 
 		require.NoError(t, err)
 		assert.NotNil(t, user)
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		firstUser, err := service.Register(context.Background(), "User1", "User123")
+		login := "User1"
+		password := "User123"
 
-		require.NoError(t, err)
-		assert.NotNil(t, firstUser)
-
-		secondUser, err := service.Register(context.Background(), "User1", "User123")
+		userRepo.
+			EXPECT().
+			SaveUser(context.Background(), login, gomock.Any()).
+			Return(nil, domain.ErrLoginAlreadyTaken)
+		user, err := service.Register(context.Background(), login, password)
 
 		require.ErrorIs(t, err, domain.ErrLoginAlreadyTaken)
-		assert.Nil(t, secondUser)
+		assert.Nil(t, user)
 	})
 }
 
 func TestUserService_Auth(t *testing.T) {
-	userRepo := &mocks.UserRepoMock{
-		Storage: []domain.User{},
-	}
+	ctrl := gomock.NewController(t)
 
-	balanceActionRepo := &mocks.BalanceActionRepoMock{
-		Storage: []domain.BalanceAction{},
-	}
+	userRepo := repomock.NewMockuserRepository(ctrl)
+	balanceActionRepo := repomock.NewMockbalanceActionsRepositoryForUser(ctrl)
 
 	service := NewUserService(userRepo, balanceActionRepo)
 
 	t.Run("valid", func(t *testing.T) {
+		login := "User"
 		password := "User123"
 		hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		require.NoError(t, err)
 
-		userRepo.Storage = append(userRepo.Storage, domain.User{
-			Login:    "User",
-			Password: string(hash),
-		})
-
-		user, err := service.Auth(context.Background(), "User", "User123")
+		userRepo.
+			EXPECT().
+			GetByLogin(context.Background(), login).
+			Return(&domain.User{Login: login, Password: string(hash)}, nil)
+		user, err := service.Auth(context.Background(), login, password)
 
 		require.NoError(t, err)
 		assert.NotNil(t, user)
 	})
 
-	t.Run("invalid", func(t *testing.T) {
-		user, err := service.Auth(context.Background(), "NotFound", "NotFound123")
+	t.Run("invalid (not found)", func(t *testing.T) {
+		login := "NotFound"
+		password := "NotFound123"
+
+		userRepo.
+			EXPECT().
+			GetByLogin(context.Background(), login).
+			Return(nil, domain.ErrNotFound)
+		user, err := service.Auth(context.Background(), login, password)
 
 		require.ErrorIs(t, err, domain.ErrInvalidLoginOrPassword)
 		assert.Nil(t, user)
+	})
 
-		password := "User123"
+	t.Run("invalid (invalid password)", func(t *testing.T) {
+		login := "NotFound"
+		password := "NotFound123"
+		invalidPassword := "NotFound1234"
 		hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		require.NoError(t, err)
 
-		userRepo.Storage = append(userRepo.Storage, domain.User{
-			Login:    "NotFound",
-			Password: string(hash),
-		})
-
-		user2, err := service.Auth(context.Background(), "NotFound", "User1234")
+		userRepo.
+			EXPECT().
+			GetByLogin(context.Background(), login).
+			Return(&domain.User{Login: login, Password: string(hash)}, nil)
+		user2, err := service.Auth(context.Background(), login, invalidPassword)
 		require.ErrorIs(t, err, domain.ErrInvalidLoginOrPassword)
 		assert.Nil(t, user2)
 	})
 }
 
 func TestUserService_GetUserBalance(t *testing.T) {
-	userRepo := &mocks.UserRepoMock{
-		Storage: []domain.User{},
-	}
+	ctrl := gomock.NewController(t)
 
-	balanceActionRepo := &mocks.BalanceActionRepoMock{
-		Storage: []domain.BalanceAction{},
-	}
+	userRepo := repomock.NewMockuserRepository(ctrl)
+	balanceActionRepo := repomock.NewMockbalanceActionsRepositoryForUser(ctrl)
 
 	service := NewUserService(userRepo, balanceActionRepo)
 
 	t.Run("valid", func(t *testing.T) {
-		balanceActionRepo.Storage = append(balanceActionRepo.Storage, domain.BalanceAction{
-			UserID: 1,
-			Amount: 100,
-		})
-		balanceActionRepo.Storage = append(balanceActionRepo.Storage, domain.BalanceAction{
-			UserID: 1,
-			Amount: -30,
-		})
-		balanceActionRepo.Storage = append(balanceActionRepo.Storage, domain.BalanceAction{
-			UserID: 2,
-			Amount: 100,
-		})
+		userID := 1
+		balance := 70.0
+		withdrawn := 30.0
 
-		balance, err := service.GetUserBalance(context.Background(), 1)
+		balanceActionRepo.
+			EXPECT().
+			GetCurrentBalance(context.Background(), userID).
+			Return(balance)
+		balanceActionRepo.
+			EXPECT().
+			GetWithdrawalAmount(context.Background(), userID).
+			Return(withdrawn)
+		userBalance, err := service.GetUserBalance(context.Background(), userID)
+
 		require.NoError(t, err)
-		assert.Equal(t, 70.0, balance.Current)
-		assert.Equal(t, 30.0, balance.Withdrawn)
+		assert.Equal(t, balance, userBalance.Current)
+		assert.Equal(t, withdrawn, userBalance.Withdrawn)
 	})
 
 	t.Run("valid zero", func(t *testing.T) {
-		balance, err := service.GetUserBalance(context.Background(), 123)
-		require.NoError(t, err)
+		userID := 1
+		balance := 0.0
+		withdrawn := 0.0
 
-		assert.Equal(t, 0.0, balance.Current)
-		assert.Equal(t, 0.0, balance.Withdrawn)
+		balanceActionRepo.
+			EXPECT().
+			GetCurrentBalance(context.Background(), userID).
+			Return(balance)
+		balanceActionRepo.
+			EXPECT().
+			GetWithdrawalAmount(context.Background(), userID).
+			Return(withdrawn)
+		userBalance, err := service.GetUserBalance(context.Background(), userID)
+
+		require.NoError(t, err)
+		assert.Equal(t, balance, userBalance.Current)
+		assert.Equal(t, withdrawn, userBalance.Withdrawn)
 	})
 }

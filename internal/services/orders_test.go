@@ -6,77 +6,93 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 
 	"github.com/MowlCoder/accumulative-loyalty-system/internal/domain"
-	"github.com/MowlCoder/accumulative-loyalty-system/internal/repositories/mocks"
+	"github.com/MowlCoder/accumulative-loyalty-system/internal/services/mocks"
 )
 
 func TestOrdersService_RegisterOrder(t *testing.T) {
-	userOrderRepo := mocks.UserOrderRepoMock{
-		Storage: []domain.UserOrder{},
-	}
+	ctrl := gomock.NewController(t)
 
-	service := NewOrdersService(&userOrderRepo)
+	userOrderRepo := repomock.NewMockuserOrderRepository(ctrl)
+	service := NewOrdersService(userOrderRepo)
 
 	t.Run("valid", func(t *testing.T) {
-		order, err := service.RegisterOrder(context.Background(), "1", 1)
+		orderID := "1"
+		userID := 1
+
+		userOrderRepo.
+			EXPECT().
+			GetByOrderID(context.Background(), orderID).
+			Return(nil, domain.ErrNotFound)
+		userOrderRepo.
+			EXPECT().
+			SaveOrder(context.Background(), orderID, userID).
+			Return(&domain.UserOrder{OrderID: orderID, UserID: userID}, nil)
+
+		order, err := service.RegisterOrder(context.Background(), orderID, userID)
 		require.NoError(t, err)
 		assert.NotNil(t, order)
 	})
 
 	t.Run("invalid (already created by you)", func(t *testing.T) {
-		order1, err := service.RegisterOrder(context.Background(), "2", 1)
-		require.NoError(t, err)
-		require.NotNil(t, order1)
+		orderID := "2"
+		userID := 1
 
-		order2, err := service.RegisterOrder(context.Background(), "2", 1)
+		userOrderRepo.
+			EXPECT().
+			GetByOrderID(context.Background(), orderID).
+			Return(&domain.UserOrder{OrderID: orderID, UserID: userID}, nil)
+
+		order, err := service.RegisterOrder(context.Background(), orderID, userID)
 		assert.ErrorIs(t, err, domain.ErrOrderRegisteredByYou)
-		assert.Nil(t, order2)
+		assert.Nil(t, order)
 	})
 
 	t.Run("invalid (already created by other)", func(t *testing.T) {
-		order1, err := service.RegisterOrder(context.Background(), "3", 2)
-		require.NoError(t, err)
-		require.NotNil(t, order1)
+		orderID := "3"
+		otherUserID := 2
+		userID := 1
 
-		order2, err := service.RegisterOrder(context.Background(), "3", 1)
+		userOrderRepo.
+			EXPECT().
+			GetByOrderID(context.Background(), orderID).
+			Return(&domain.UserOrder{OrderID: orderID, UserID: otherUserID}, nil)
+
+		order, err := service.RegisterOrder(context.Background(), orderID, userID)
 		assert.ErrorIs(t, err, domain.ErrOrderRegisteredByOther)
-		assert.Nil(t, order2)
+		assert.Nil(t, order)
 	})
 }
 
 func TestOrdersService_GetUserOrders(t *testing.T) {
-	userOrderRepo := mocks.UserOrderRepoMock{
-		Storage: []domain.UserOrder{},
-	}
+	ctrl := gomock.NewController(t)
 
-	service := NewOrdersService(&userOrderRepo)
+	userOrderRepo := repomock.NewMockuserOrderRepository(ctrl)
+	service := NewOrdersService(userOrderRepo)
 
 	t.Run("valid", func(t *testing.T) {
-		userOrderRepo.Storage = append(userOrderRepo.Storage, domain.UserOrder{
-			OrderID: "1",
-			UserID:  1,
-		})
+		userID := 1
+		userOrderRepo.
+			EXPECT().
+			GetByUserID(context.Background(), userID).
+			Return([]domain.UserOrder{{OrderID: "1", UserID: userID}, {OrderID: "2", UserID: userID}}, nil)
 
-		userOrderRepo.Storage = append(userOrderRepo.Storage, domain.UserOrder{
-			OrderID: "3",
-			UserID:  1,
-		})
-
-		userOrderRepo.Storage = append(userOrderRepo.Storage, domain.UserOrder{
-			OrderID: "2",
-			UserID:  2,
-		})
-
-		orders, err := service.GetUserOrders(context.Background(), 1)
+		orders, err := service.GetUserOrders(context.Background(), userID)
 		require.NoError(t, err)
 		assert.Len(t, orders, 2)
 	})
 
 	t.Run("valid zero", func(t *testing.T) {
-		userOrderRepo.Storage = make([]domain.UserOrder, 0)
+		userID := 1
 
-		orders, err := service.GetUserOrders(context.Background(), 1)
+		userOrderRepo.
+			EXPECT().
+			GetByUserID(context.Background(), userID).
+			Return([]domain.UserOrder{}, nil)
+
+		orders, err := service.GetUserOrders(context.Background(), userID)
 		require.NoError(t, err)
 		assert.Len(t, orders, 0)
 	})
