@@ -7,10 +7,12 @@ import (
 	"github.com/go-chi/httprate"
 )
 
-func RateLimit(next http.Handler) http.HandlerFunc {
-	rateLimiter := httprate.Limit(2000, time.Minute*1)(next)
+func NewRateLimit(requestLimit int, duration time.Duration) func(next http.Handler) http.HandlerFunc {
+	return func(next http.Handler) http.HandlerFunc {
+		rateLimiter := httprate.Limit(requestLimit, duration)(next)
 
-	return func(w http.ResponseWriter, r *http.Request) {
-		rateLimiter.ServeHTTP(w, r)
+		return func(w http.ResponseWriter, r *http.Request) {
+			rateLimiter.ServeHTTP(w, r)
+		}
 	}
 }
