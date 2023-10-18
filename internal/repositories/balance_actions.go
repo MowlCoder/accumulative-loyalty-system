@@ -31,6 +31,22 @@ func (r *BalanceActionsRepository) Save(ctx context.Context, userID int, orderID
 	defer tx.Rollback(ctx)
 
 	query := `
+		SELECT id
+		FROM users
+		WHERE id = $1
+		FOR UPDATE
+	`
+
+	_, err = tx.Exec(
+		ctx,
+		query,
+		userID,
+	)
+	if err != nil {
+		return err
+	}
+
+	query = `
 	   INSERT INTO balance_actions (user_id, amount, order_id, processed_at)
 	   VALUES ($1, $2, $3, $4)
 	`
