@@ -29,12 +29,6 @@ func (s *WithdrawalsService) GetWithdrawalsHistory(ctx context.Context, userID i
 }
 
 func (s *WithdrawalsService) WithdrawBalance(ctx context.Context, userID int, orderID string, amount float64) error {
-	userBalance := s.balanceActionRepository.GetCurrentBalance(ctx, userID)
-
-	if userBalance-amount < 0 {
-		return domain.ErrInsufficientFunds
-	}
-
 	err := s.balanceActionRepository.Save(ctx, userID, orderID, -amount)
 
 	if err != nil {

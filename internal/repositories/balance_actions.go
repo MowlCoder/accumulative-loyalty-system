@@ -23,18 +23,50 @@ func NewBalanceActionsRepository(pool *pgxpool.Pool) *BalanceActionsRepository {
 }
 
 func (r *BalanceActionsRepository) Save(ctx context.Context, userID int, orderID string, amount float64) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback(ctx)
+
 	query := `
 	   INSERT INTO balance_actions (user_id, amount, order_id, processed_at)
 	   VALUES ($1, $2, $3, $4)
 	`
 
-	_, err := r.pool.Exec(
+	_, err = tx.Exec(
 		ctx,
 		query,
 		userID, amount, orderID, time.Now().UTC(),
 	)
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	if amount < 0 {
+		query = `
+			SELECT SUM(amount)
+			FROM balance_actions
+			WHERE user_id = $1
+		`
+
+		var currentBalance float64
+		if err := tx.QueryRow(ctx, query, userID).Scan(&currentBalance); err != nil {
+			return err
+		}
+
+		if currentBalance < 0 {
+			return domain.ErrInsufficientFunds
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *BalanceActionsRepository) GetCurrentBalance(ctx context.Context, userID int) float64 {
