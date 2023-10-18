@@ -19,14 +19,9 @@ func TestWithdrawalsService_WithdrawBalance(t *testing.T) {
 
 	t.Run("valid withdrawal", func(t *testing.T) {
 		userID := 1
-		balance := 150.0
 		orderID := "100"
 		amount := 100.0
 
-		balanceActionRepo.
-			EXPECT().
-			GetCurrentBalance(context.Background(), userID).
-			Return(balance)
 		balanceActionRepo.
 			EXPECT().
 			Save(context.Background(), userID, orderID, -amount).
@@ -38,14 +33,13 @@ func TestWithdrawalsService_WithdrawBalance(t *testing.T) {
 
 	t.Run("invalid withdrawal", func(t *testing.T) {
 		userID := 1
-		balance := 150.0
 		orderID := "100"
 		amount := 500.0
 
 		balanceActionRepo.
 			EXPECT().
-			GetCurrentBalance(context.Background(), userID).
-			Return(balance)
+			Save(context.Background(), userID, orderID, -amount).
+			Return(domain.ErrInsufficientFunds)
 
 		err := service.WithdrawBalance(context.Background(), userID, orderID, amount)
 		assert.ErrorIs(t, err, domain.ErrInsufficientFunds)
