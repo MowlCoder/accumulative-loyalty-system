@@ -1,0 +1,167 @@
+basePath: /api
+definitions:
+  domain.GoodReward:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      match:
+        type: string
+      reward:
+        type: number
+      reward_type:
+        type: string
+    type: object
+  domain.OrderGood:
+    properties:
+      description:
+        type: string
+      price:
+        type: number
+    type: object
+  domain.RegisteredOrder:
+    properties:
+      accrual:
+        type: number
+      created_at:
+        type: string
+      goods:
+        items:
+          $ref: '#/definitions/domain.OrderGood'
+        type: array
+      order_id:
+        type: string
+      status:
+        type: string
+    type: object
+  handlers.getRegisteredOrderInfoResponse:
+    properties:
+      accrual:
+        type: number
+      order:
+        type: string
+      status:
+        type: string
+    type: object
+  handlers.registerOrderForAccrualBody:
+    properties:
+      goods:
+        items:
+          $ref: '#/definitions/domain.OrderGood'
+        type: array
+      order:
+        type: string
+    type: object
+  handlers.saveNewGoodRewardBody:
+    properties:
+      match:
+        type: string
+      reward:
+        type: number
+      reward_type:
+        type: string
+    type: object
+  httputils.HTTPError:
+    properties:
+      error:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Accrual service responsible for calculating accrual for registered
+    orders
+  title: Gophermart Accrual Service
+  version: "1.0"
+paths:
+  /goods:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Add new Good Reward
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.saveNewGoodRewardBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.GoodReward'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputils.HTTPError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httputils.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputils.HTTPError'
+      summary: Save new good reward
+      tags:
+      - goods
+  /orders:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Register Order for accrual
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.registerOrderForAccrualBody'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/domain.RegisteredOrder'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputils.HTTPError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/httputils.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputils.HTTPError'
+      summary: Register order for accrual
+      tags:
+      - order
+  /orders/{orderID}:
+    get:
+      parameters:
+      - description: Order ID
+        in: path
+        name: orderID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.getRegisteredOrderInfoResponse'
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputils.HTTPError'
+      summary: Get registered order info
+      tags:
+      - order
+swagger: "2.0"

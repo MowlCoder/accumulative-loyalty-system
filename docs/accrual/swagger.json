@@ -1,0 +1,257 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Accrual service responsible for calculating accrual for registered orders",
+        "title": "Gophermart Accrual Service",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/api",
+    "paths": {
+        "/goods": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "goods"
+                ],
+                "summary": "Save new good reward",
+                "parameters": [
+                    {
+                        "description": "Add new Good Reward",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.saveNewGoodRewardBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.GoodReward"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/orders": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "order"
+                ],
+                "summary": "Register order for accrual",
+                "parameters": [
+                    {
+                        "description": "Register Order for accrual",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.registerOrderForAccrualBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/domain.RegisteredOrder"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.HTTPError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/orders/{orderID}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "order"
+                ],
+                "summary": "Get registered order info",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "orderID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.getRegisteredOrderInfoResponse"
+                        }
+                    },
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.HTTPError"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "domain.GoodReward": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "match": {
+                    "type": "string"
+                },
+                "reward": {
+                    "type": "number"
+                },
+                "reward_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.OrderGood": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                }
+            }
+        },
+        "domain.RegisteredOrder": {
+            "type": "object",
+            "properties": {
+                "accrual": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "goods": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.OrderGood"
+                    }
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.getRegisteredOrderInfoResponse": {
+            "type": "object",
+            "properties": {
+                "accrual": {
+                    "type": "number"
+                },
+                "order": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.registerOrderForAccrualBody": {
+            "type": "object",
+            "properties": {
+                "goods": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.OrderGood"
+                    }
+                },
+                "order": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.saveNewGoodRewardBody": {
+            "type": "object",
+            "properties": {
+                "match": {
+                    "type": "string"
+                },
+                "reward": {
+                    "type": "number"
+                },
+                "reward_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "httputils.HTTPError": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
