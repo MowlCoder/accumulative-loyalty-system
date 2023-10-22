@@ -19,13 +19,25 @@ The core system allows the user to register and start registering their complete
 
 To get started with the Accumulative Loyalty System, follow these steps:
 
-1. **Clone the Repository:** `git clone https://github.com/MowlCoder/accumulative-loyalty-system.git`
+1. **Clone the Repository:**
+```shell
+git clone https://github.com/MowlCoder/accumulative-loyalty-system.git
+```
 
-2. **Install Dependencies:** `go mod tidy`
+2. **Install Dependencies:**
+```shell
+go mod tidy
+```
 
 3. **Configure Settings:** Create an `.env` file and populate it based on the `.env.example` file
 
-4. **Run application:** `go run ./cmd/gophermart/main.go` and `go run ./cmd/accrual/main.go`
+4. **Run application:**
+```shell
+go run ./cmd/gophermart/main.go
+```
+```shell
+go run ./cmd/accrual/main.go
+```
 
 ## Documentation
 
