@@ -2,6 +2,8 @@
 
 ## Overview
 
+It is a project for Yandex Practicum course **Advanced Go developer**.
+
 The project is divided into two parts: an accrual system and a core system.
 
 The accrual system provides an opportunity to register information about the reward for the order and to register the order for the calculation of bonus points.
