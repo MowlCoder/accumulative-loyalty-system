@@ -1,25 +1,36 @@
-# go-musthave-group-diploma-tpl
+# Accumulative Loyalty System
 
-Шаблон репозитория для группового дипломного проекта курса "Go-разработчик"
+## Overview
 
-# Начало работы
+The project is divided into two parts: an accrual system and a core system.
 
-1. Склонируйте репозиторий в любую подходящую директорию на вашем компьютере
-2. В корне репозитория выполните команду `go mod init <name>` (где `<name>` — адрес вашего репозитория на GitHub без
-   префикса `https://`) для создания модуля
+The accrual system provides an opportunity to register information about the reward for the order and to register the order for the calculation of bonus points.
 
-# Обновление шаблона
+The core system allows the user to register and start registering their completed orders, then the core system accesses the accrual system to obtain the number of points to be credited to the user, as well as the user can write off the accumulated points for future orders.
+## Technologies
 
-Чтобы иметь возможность получать обновления автотестов и других частей шаблона, выполните команду:
+- **Language:** Go
 
-```
-git remote add -m master template https://github.com/yandex-praktikum/go-musthave-group-diploma-tpl.git
-```
+- **Database:** Postgres
 
-Для обновления кода автотестов выполните команду:
+- **Documentation:** Swagger 2.0
 
-```
-git fetch template && git checkout template/master .github
-```
+## Getting Started
 
-Затем добавьте полученные изменения в свой репозиторий.
+To get started with the Accumulative Loyalty System, follow these steps:
+
+1. **Clone the Repository:** `git clone https://github.com/MowlCoder/accumulative-loyalty-system.git`
+
+2. **Install Dependencies:** `go mod tidy`
+
+3. **Configure Settings:** Create an `.env` file and populate it based on the `.env.example` file
+
+4. **Run application:** `go run ./cmd/gophermart/main.go` and `go run ./cmd/accrual/main.go`
+
+## Documentation
+
+Documentation is available in the [docs](/docs) directory or at `/swagger/index.html` endpoint.
+
+## Contact
+
+If you have any questions or need assistance, please don't hesitate to reach out at **maikezseller@gmail.com**.
