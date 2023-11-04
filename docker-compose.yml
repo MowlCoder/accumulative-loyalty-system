@@ -1,0 +1,38 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:latest
+    container_name: "database"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "35432:5432"
+
+  accrual:
+    build:
+      dockerfile: cmd/accrual/Dockerfile
+      context: .
+    container_name: "accrual"
+    environment:
+      DATABASE_URI: postgres://postgres:postgres@db:5432/postgres
+      RUN_ADDRESS: :8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      - db
+
+  gophermart:
+    build:
+      dockerfile: cmd/gophermart/Dockerfile
+      context: .
+    container_name: "gophermart"
+    environment:
+      DATABASE_URI: postgres://postgres:postgres@db:5432/postgres
+      RUN_ADDRESS: :8080
+      ACCRUAL_SYSTEM_ADDRESS: http://accrual:8081
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
