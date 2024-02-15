@@ -127,7 +127,6 @@ type loginResponse struct {
 // @Router /login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var body loginBody
-
 	if status, err := jsonutil.Unmarshal(w, r, &body); err != nil {
 		httputils.SendJSONErrorResponse(w, status, err.Error())
 		return
@@ -139,7 +138,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, err := h.userService.Auth(r.Context(), body.Login, body.Password)
-
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidLoginOrPassword) {
 			httputils.SendJSONErrorResponse(w, http.StatusUnauthorized, err.Error())
@@ -151,7 +149,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	accessToken, err := jwt.GenerateToken(user.ID)
-
 	if err != nil {
 		httputils.SendJSONErrorResponse(w, http.StatusInternalServerError, "can not generate token")
 		return

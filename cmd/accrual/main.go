@@ -125,7 +125,10 @@ func makeRouter(
 	})
 
 	router.Route("/api/orders", func(r chi.Router) {
-		r.Get("/{orderID}", middlewares.NewRateLimit(2000, time.Minute*1)(http.HandlerFunc(accrualOrdersHandler.GetRegisteredOrderInfo)))
+		r.Get("/{orderID}", middlewares.NewRateLimit(
+			2000,
+			time.Minute*1,
+		)(http.HandlerFunc(accrualOrdersHandler.GetRegisteredOrderInfo)))
 		r.Post("/", accrualOrdersHandler.RegisterOrderForAccrual)
 	})
 
